@@ -1,0 +1,90 @@
+body {
+  font-family: 'Poppins', sans-serif;
+}
+/* Animaciones */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Transiciones */
+.transition-all {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+/* Loader personalizado */
+.loader {
+    border-top-color: #1a1a00;
+    animation: spin 1s linear infinite;
+}
+
+/* Efectos hover */
+.wallet-address {
+    transition: color 0.2s ease;
+}
+
+.wallet-address:hover {
+    color: #1a1a00;
+    cursor: pointer;
+}
+
+/* Botón de copiar */
+.copy-btn {
+    transition: all 0.2s ease;
+    opacity: 0;
+}
+
+tr:hover .copy-btn {
+    opacity: 1;
+}
+
+/* Efecto de aparición para las filas */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+tr {
+    animation: fadeIn 0.3s ease forwards;
+    opacity: 0;
+}
+/* Barra de progreso */
+#progress-container {
+    transition: all 0.3s ease;
+}
+
+#progress-bar {
+    transition: width 0.5s ease;
+}
+
+/* Botón principal */
+#fetch-top-earners {
+    transition: all 0.2s ease;
+}
+
+#fetch-top-earners:disabled {
+    opacity: 0.7;
+    transform: none !important;
+}
+
+/* Efecto de pulso cuando está activo */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(26, 26, 0, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(26, 26, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(26, 26, 0, 0); }
+}
+
+#fetch-top-earners:enabled:hover {
+    animation: pulse 1.5s infinite;
+}
+
+/* Mensaje de tiempo */
+.time-info {
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards 0.5s;
+}

@@ -1,0 +1,36 @@
+<div class="w-full max-w-[900px] px-2 mb-20">
+    <h2 class="text-xl font-bold text-black mb-4 text-left">Top earners</h2>
+    <div class="bg-white p-6 rounded-xl shadow-lg">
+        <button id="fetch-top-earners" class="bg-[#1a1a00] text-white font-bold rounded-full px-6 py-3 mb-6 hover:bg-black transition-all transform hover:scale-105 shadow-lg w-full">
+            <span class="flex items-center justify-center">
+                <i class="fas fa-rocket mr-2"></i>
+                Analizar Leaderboard Completo
+            </span>
+        </button>
+
+        <div id="progress-container" class="hidden mb-4">
+            <div class="flex justify-between text-sm text-gray-600 mb-1">
+                <span id="progress-status">Preparando análisis...</span>
+                <span id="progress-percentage">0%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div id="progress-bar" class="bg-[#1a1a00] h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl">
+            <table id="earners-table" class="min-w-full text-sm text-center bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <thead class="bg-gray-100 text-gray-700 uppercase text-xs tracking-wider">
+                    <tr>
+                        <th class="px-4 py-3 border-b">#</th>
+                        <th class="px-4 py-3 border-b">Wallet</th>
+                        <th class="px-4 py-3 border-b">PP Ganados</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body" class="divide-y divide-gray-200">
+                    <!-- Contenido dinámico -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

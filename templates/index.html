@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plume tracker</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  </head>
+  <body class="bg-[#e8e8e8] min-h-screen flex flex-col items-center">
+    <!-- NAVBAR -->
+    <nav class="mt-8 w-[90vw] max-w-[900px] border-2 border-gray-600 rounded-full flex items-center justify-between px-6 py-2 bg-white shadow-lg">
+      <div class="font-bold text-lg">Plume tracker</div>
+      <ul class="flex space-x-8 text-base font-normal font-sans">
+        <li>Home</li>
+        <li>S2 Stats</li>
+        <li>Sybil analysis</li>
+      </ul>
+      <a href="https://portal.plume.org/?referrer=XanthicReliablePot183" class="bg-[#1a1a00] text-white font-bold rounded-full px-5 py-2 text-base hover:bg-black transition">
+        Enter portal
+      </a>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="flex-grow w-full flex flex-col items-center mt-20 px-4">
+      <!-- BUSCADOR -->
+      <div class="flex flex-col items-center w-full max-w-[700px] mb-16 text-center">
+        <h2 class="text-xl font-bold text-black mb-2">
+          Busca una wallet / <span class="font-normal">Search a wallet</span>
+        </h2>
+        <form id="search-form" class="relative w-full">
+          <input id="wallet-search" type="text" placeholder="0xas21AZ..." class="w-full rounded-full border border-gray-300 bg-gray-100 py-3 pl-12 pr-10 text-black text-base font-sans focus:outline-none focus:ring-2 focus:ring-black transition-all" />
+          <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg pointer-events-none"></i>
+          <button type="button" id="clear-btn" aria-label="Clear search" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg hover:text-black transition-colors">
+            <i class="fas fa-times"></i>
+          </button>
+        </form>
+      </div>
+
+      <!-- TOP EARNERS -->
+      {% include 'components/table.html' %}
+    </main>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/table.js') }}"></script>
+  </body>
+</html>
