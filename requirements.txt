@@ -1,6 +1,6 @@
 flask
 requests
 python-dotenv
-aiohttp
-nest-asyncio
-pandas
+aiohttp==3.9.3
+pandas==2.2.1
+nest-asyncio==1.6.0

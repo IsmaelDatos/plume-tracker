@@ -3,6 +3,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (fetchBtn) {
         fetchBtn.addEventListener('click', fetchTopEarners);
     }
+
+    // Variable global para el EventSource
+    let eventSource;
 });
 
 async function fetchTopEarners() {
@@ -17,25 +20,30 @@ async function fetchTopEarners() {
     resetUI();
 
     try {
-        const eventSource = new EventSource('/api/top-earners-stream');
+        // Cerrar conexión anterior si existe
+        if (window.eventSource) {
+            window.eventSource.close();
+        }
 
-        eventSource.onmessage = (event) => {
+        window.eventSource = new EventSource('/api/app');
+
+        window.eventSource.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
                 handleSSEEvent(data);
             } catch (e) {
                 console.error("Error parsing SSE data:", e);
                 showError('Error procesando datos del servidor');
-                eventSource.close();
+                if (window.eventSource) window.eventSource.close();
             }
         };
 
-        eventSource.onerror = () => {
-            if (eventSource.readyState === EventSource.CLOSED) {
+        window.eventSource.onerror = () => {
+            if (window.eventSource && window.eventSource.readyState === EventSource.CLOSED) {
                 return;
             }
             showError('Error en la conexión. Intenta recargar la página.');
-            eventSource.close();
+            if (window.eventSource) window.eventSource.close();
         };
 
     } catch (error) {
@@ -69,13 +77,13 @@ async function fetchTopEarners() {
         }
         
         if (data.type === 'complete') {
-            eventSource.close();
+            if (window.eventSource) window.eventSource.close();
             renderTable(data.results);
             showCompletion(data);
         }
 
         if (data.type === 'error') {
-            eventSource.close();
+            if (window.eventSource) window.eventSource.close();
             showError(data.message);
         }
     }
@@ -96,7 +104,7 @@ async function fetchTopEarners() {
     function showError(message) {
         tableBody.innerHTML = `
             <tr>
-                <td colspan="3" class="py-8 text-center text-red-500">
+                <td colspan="5" class="py-8 text-center text-red-500">
                     <i class="fas fa-exclamation-circle mr-2"></i>
                     ${message}
                 </td>
@@ -110,16 +118,22 @@ async function fetchTopEarners() {
     }
 
     function restoreButton() {
-        fetchBtn.disabled = false;
-        fetchBtn.innerHTML = `
-            <span class="flex items-center justify-center">
-                <i class="fas fa-redo mr-2"></i>
-                Volver a analizar
-            </span>
-        `;
+        const fetchBtn = document.getElementById('fetch-top-earners');
+        if (fetchBtn) {
+            fetchBtn.disabled = false;
+            fetchBtn.innerHTML = `
+                <span class="flex items-center justify-center">
+                    <i class="fas fa-redo mr-2"></i>
+                    Volver a analizar
+                </span>
+            `;
+        }
     }
 
     function renderTable(items) {
+        const tableBody = document.getElementById('table-body');
+        if (!tableBody) return;
+
         tableBody.innerHTML = '';
 
         items.forEach((item, index) => {
@@ -137,8 +151,14 @@ async function fetchTopEarners() {
                         <i class="fas fa-copy"></i>
                     </button>
                 </td>
-                <td class="px-4 py-3 border-b font-medium">
-                    <span class="text-[#1a1a00]">${item.Ganancia.toLocaleString()}</span>
+                <td class="px-4 py-3 border-b text-center">
+                    ${item['Rank leaderboard']?.toLocaleString() || 'N/A'}
+                </td>
+                <td class="px-4 py-3 border-b text-center">
+                    ${item['PP total']?.toLocaleString() || '0'}
+                </td>
+                <td class="px-4 py-3 border-b font-medium text-center">
+                    <span class="text-[#1a1a00]">${item.Ganancia?.toLocaleString() || '0'}</span>
                     <span class="text-xs text-gray-500 ml-1">PP</span>
                 </td>
             `;
@@ -152,11 +172,13 @@ async function fetchTopEarners() {
                 navigator.clipboard.writeText(wallet);
 
                 const icon = e.currentTarget.querySelector('i');
-                icon.className = 'fas fa-check';
-                setTimeout(() => {
-                    icon.className = 'fas fa-copy';
-                }, 2000);
+                if (icon) {
+                    icon.className = 'fas fa-check';
+                    setTimeout(() => {
+                        icon.className = 'fas fa-copy';
+                    }, 2000);
+                }
             });
         });
     }
-}
+};

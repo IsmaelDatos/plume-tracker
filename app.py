@@ -5,21 +5,20 @@ import pandas as pd
 import json
 import time
 import nest_asyncio
-from functools import wraps
+from concurrent.futures import ThreadPoolExecutor
 
-# Aplicar parche para asyncio en Flask
 nest_asyncio.apply()
 
 app = Flask(__name__)
+executor = ThreadPoolExecutor(max_workers=4)
 
-# Configuración
+# Configuración actualizada según el código original que funciona
 LEADERBOARD_URL = "https://portal-api.plume.org/api/v1/stats/leaderboard"
 PP_TOTALS_URL = "https://portal-api.plume.org/api/v1/stats/pp-totals"
 HEADERS = {"User-Agent": "plume-fast-scan/1.0"}
 LB_BATCH_SIZE = 10000
-CONCURRENCY = 10
+CONCURRENCY = 30  # Aumentamos la concurrencia
 TIMEOUT_SECS = 30
-BATCH_SIZE = 50
 
 class SSEStreamer:
     def __init__(self):
@@ -40,82 +39,79 @@ class SSEStreamer:
 async def fetch_leaderboard_wallets():
     wallets = []
     offset = 0
-    async with aiohttp.ClientSession(headers=HEADERS) as session:
+    async with aiohttp.ClientSession(headers=HEADERS, timeout=aiohttp.ClientTimeout(total=TIMEOUT_SECS)) as session:
         while True:
-            try:
-                params = {
-                    "offset": offset,
-                    "count": LB_BATCH_SIZE,
-                    "walletAddress": "undefined",
-                    "overrideDay1Override": "false",
-                    "preview": "false",
-                }
-                async with session.get(LEADERBOARD_URL, params=params, timeout=TIMEOUT_SECS) as r:
-                    data = await r.json()
-                    page = data["data"]["leaderboard"]
-                    if not page:
-                        break
-
-                    for row in page:
-                        if row["totalXp"] == 0:
-                            return wallets
-                        wallets.append({
-                            "wallet": row["walletAddress"].lower(),
-                            "rank": offset + len(wallets) + 1,
-                            "totalXp": row["totalXp"]
-                        })
-
-                    offset += LB_BATCH_SIZE
-
-            except Exception as e:
-                print(f"Error fetching leaderboard: {str(e)}")
-                break
+            params = {
+                "offset": offset,
+                "count": LB_BATCH_SIZE,
+                "overrideDay1Override": "false",
+                "preview": "false",
+            }
+            async with session.get(LEADERBOARD_URL, params=params) as r:
+                data = await r.json()
+                page = data.get("data", {}).get("leaderboard", [])
+                if not page:
+                    break
+                
+                # Filtramos wallets con XP > 0 como en el código original
+                batch_wallets = [(row["walletAddress"].lower(), row["totalXp"]) for row in page if row["totalXp"] > 0]
+                wallets.extend(batch_wallets)
+                
+                if len(page) < LB_BATCH_SIZE:
+                    break
+                offset += LB_BATCH_SIZE
     return wallets
 
-async def fetch_pp_gain(session, wallet):
+sem = asyncio.Semaphore(CONCURRENCY)
+
+async def fetch_xp_delta(session, wallet):
+    url = f"{PP_TOTALS_URL}?walletAddress={wallet}"
     try:
-        url = f"{PP_TOTALS_URL}?walletAddress={wallet}"
-        async with session.get(url, timeout=TIMEOUT_SECS) as resp:
+        async with sem, session.get(url) as resp:
             js = await resp.json()
             data = js.get("data", {}).get("ppScores", {})
             active = data.get("activeXp", {}).get("totalXp", 0)
             prev = data.get("prevXp", {}).get("totalXp", 0)
-            return active, prev
-    except Exception as e:
-        print(f"Error fetching PP for {wallet}: {str(e)}")
-        return 0, 0
+            return wallet, active, active - prev
+    except:
+        return wallet, 0, 0
 
 async def process_data(streamer):
     try:
         start_time = time.time()
 
-        wallets_data = await fetch_leaderboard_wallets()
-        if not wallets_data:
+        # Obtener wallets como en el código original
+        leaderboard = await fetch_leaderboard_wallets()
+        if not leaderboard:
             await streamer.queue.put(f"data: {json.dumps({'type': 'error', 'message': 'No se encontraron wallets con XP > 0'})}\n\n")
             return
 
-        total_wallets = len(wallets_data)
+        total_wallets = len(leaderboard)
         await streamer.queue.put(f"data: {json.dumps({'type': 'progress', 'current': 0, 'total': total_wallets, 'message': f'Encontradas {total_wallets} wallets con XP > 0'})}\n\n")
 
+        # Ordenar por XP para calcular ranking
+        sorted_lb = sorted(leaderboard, key=lambda x: x[1], reverse=True)
+        leaderboard_rank = {wallet: rank + 1 for rank, (wallet, _) in enumerate(sorted_lb)}
+
+        # Procesar con semáforo como en el código original
         results = []
+        async with aiohttp.ClientSession(headers=HEADERS, timeout=aiohttp.ClientTimeout(total=TIMEOUT_SECS)) as session:
+            tasks = [fetch_xp_delta(session, wallet) for wallet, _ in sorted_lb]
+            
+            for i, fut in enumerate(asyncio.as_completed(tasks)):
+                wallet, active, delta = await fut
+                results.append({
+                    "wallet": wallet,
+                    "Rank leaderboard": leaderboard_rank[wallet],
+                    "PP total": active,
+                    "Ganancia": delta
+                })
+                
+                # Actualizar progreso cada 100 wallets
+                if i % 100 == 0 or i == len(tasks) - 1:
+                    await streamer.queue.put(f"data: {json.dumps({'type': 'progress', 'current': i + 1, 'total': total_wallets, 'message': f'Procesando wallet {i + 1} de {total_wallets}'})}\n\n")
 
-        async def process_batch(batch):
-            async with aiohttp.ClientSession(headers=HEADERS) as session:
-                tasks = [fetch_pp_gain(session, item["wallet"]) for item in batch]
-                pp_gains = await asyncio.gather(*tasks)
-                for i, (active, prev) in enumerate(pp_gains):
-                    results.append({
-                        "wallet": batch[i]["wallet"],
-                        "Rank leaderboard": batch[i]["rank"],
-                        "PP total": batch[i]["totalXp"],
-                        "Ganancia": active - prev
-                    })
-                await streamer.queue.put(f"data: {json.dumps({'type': 'progress', 'current': min(batch[-1]['rank'], total_wallets), 'total': total_wallets, 'message': f'Procesando wallets {batch[0]["rank"]}-{batch[-1]["rank"]} de {total_wallets}'})}\n\n")
-
-        for i in range(0, len(wallets_data), BATCH_SIZE):
-            batch = wallets_data[i:i + BATCH_SIZE]
-            await process_batch(batch)
-
+        # Generar resultados finales
         df = pd.DataFrame(results)
         df_top20 = df.sort_values("Ganancia", ascending=False).head(20)
         processing_time = f"{time.time() - start_time:.2f} segundos"
@@ -128,37 +124,45 @@ async def process_data(streamer):
     finally:
         streamer.done = True
 
+def run_async(coro):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    return loop.run_until_complete(coro)
+
 @app.route('/api/top-earners-stream')
-async def stream_top_earners():
-    streamer = SSEStreamer()
-    asyncio.create_task(process_data(streamer))
+def stream_top_earners():
+    def generate():
+        streamer = SSEStreamer()
+        executor.submit(lambda: asyncio.run(process_data(streamer)))
+        
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            while True:
+                try:
+                    item = loop.run_until_complete(asyncio.wait_for(streamer.queue.get(), timeout=5.0))
+                    yield item
+                except asyncio.TimeoutError:
+                    if streamer.done:
+                        break
+                    continue
+        finally:
+            loop.close()
     
-    async def generate():
-        async for chunk in streamer:
-            yield chunk
-    
-    return Response(generate(), mimetype='text/event-stream')
+    return Response(
+        generate(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'
+        }
+    )
 
 @app.route('/')
 def home():
     return render_template('index.html')
-
-@app.route('/api/data')
-def get_plume_data():
-    try:
-        import requests
-        wallet = request.args.get('wallet')
-        params = {
-            "offset": 0,
-            "count": 100,
-            "walletAddress": wallet if wallet else "undefined",
-            "overrideDay1Override": "false",
-            "preview": "false"
-        }
-        response = requests.get(LEADERBOARD_URL, params=params, headers=HEADERS, timeout=30)
-        return jsonify(response.json())
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, threaded=True)
