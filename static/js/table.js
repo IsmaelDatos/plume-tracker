@@ -3,9 +3,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (fetchBtn) {
         fetchBtn.addEventListener('click', fetchTopEarners);
     }
-
-    // Variable global para el EventSource
-    let eventSource;
 });
 
 async function fetchTopEarners() {
@@ -20,35 +17,39 @@ async function fetchTopEarners() {
     resetUI();
 
     try {
-        // Cerrar conexión anterior si existe
-        if (window.eventSource) {
-            window.eventSource.close();
-        }
+        let progress = 0;
+        const total = 100;
+        const pollInterval = 2000;
 
-        window.eventSource = new EventSource('/api/app');
-
-        window.eventSource.onmessage = (event) => {
+        const poll = async () => {
             try {
-                const data = JSON.parse(event.data);
-                handleSSEEvent(data);
-            } catch (e) {
-                console.error("Error parsing SSE data:", e);
-                showError('Error procesando datos del servidor');
-                if (window.eventSource) window.eventSource.close();
+                const response = await fetch('/api/app');
+                const data = await response.json();
+
+                if (response.ok) {
+                    progress += 10;
+                    if (progress < total) {
+                        updateProgress(progress, total, `Procesando... ${progress}%`);
+                        setTimeout(poll, pollInterval);
+                    } else {
+                        renderTable(data);
+                        showCompletion({ total_wallets: data.length, processing_time: "Simulado" });
+                    }
+                } else {
+                    showError(data.error || "Error del servidor");
+                }
+            } catch (error) {
+                showError("Error de conexión");
             }
         };
 
-        window.eventSource.onerror = () => {
-            if (window.eventSource && window.eventSource.readyState === EventSource.CLOSED) {
-                return;
-            }
-            showError('Error en la conexión. Intenta recargar la página.');
-            if (window.eventSource) window.eventSource.close();
-        };
+        poll();
 
     } catch (error) {
         showError(error.message);
     }
+
+    // Funciones auxiliares
 
     function resetUI() {
         tableBody.innerHTML = '';
@@ -66,26 +67,11 @@ async function fetchTopEarners() {
         progressStatus.textContent = 'Conectando con el servidor...';
     }
 
-    function handleSSEEvent(data) {
-        console.log("Evento recibido:", data);
-        
-        if (data.type === 'progress') {
-            const percent = Math.round(data.current * 100 / data.total);
-            progressBar.style.width = `${percent}%`;
-            progressPercentage.textContent = `${percent}%`;
-            progressStatus.textContent = data.message || `Procesando ${data.current} de ${data.total}`;
-        }
-        
-        if (data.type === 'complete') {
-            if (window.eventSource) window.eventSource.close();
-            renderTable(data.results);
-            showCompletion(data);
-        }
-
-        if (data.type === 'error') {
-            if (window.eventSource) window.eventSource.close();
-            showError(data.message);
-        }
+    function updateProgress(current, total, message) {
+        const percent = Math.round(current * 100 / total);
+        progressBar.style.width = `${percent}%`;
+        progressPercentage.textContent = `${percent}%`;
+        progressStatus.textContent = message;
     }
 
     function showCompletion(data) {
@@ -165,7 +151,6 @@ async function fetchTopEarners() {
             tableBody.appendChild(row);
         });
 
-        // Funcionalidad de copiar dirección
         document.querySelectorAll('.copy-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const wallet = e.currentTarget.getAttribute('data-wallet');
@@ -181,4 +166,4 @@ async function fetchTopEarners() {
             });
         });
     }
-};
+}
