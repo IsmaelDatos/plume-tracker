@@ -1,4 +1,4 @@
-flask
+flask[async]
 requests
 python-dotenv
 aiohttp==3.9.3

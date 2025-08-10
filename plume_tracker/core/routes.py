@@ -56,7 +56,6 @@ def search_wallet():
 
     return redirect(f'/wallet/{wallet_address}')
 
-
 @bp.route('/wallet/<wallet_address>')
 def wallet_details(wallet_address):
     try:
