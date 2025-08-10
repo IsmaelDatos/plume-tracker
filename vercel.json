@@ -8,7 +8,8 @@
         "maxLambdaSize": "15mb",
         "includeFiles": [
           "plume_tracker/templates/**",
-          "plume_tracker/static/**"
+          "plume_tracker/static/**",
+          "plume_tracker/core/**"
         ]
       }
     }
@@ -16,7 +17,7 @@
   "routes": [
     {
       "src": "/static/(.*)",
-      "dest": "/plume_tracker/static/$1"
+      "dest": "/static/$1"
     },
     {
       "src": "/(.*)",

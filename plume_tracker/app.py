@@ -2,13 +2,17 @@ import os
 from flask import Flask, send_from_directory
 from concurrent.futures import ThreadPoolExecutor
 
-app = Flask(__name__,
-           template_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates')),
-           static_folder=os.path.abspath(os.path.join(os.path.dirname(__file__), 'static')))
+# Crea la instancia de Flask
+app = Flask(
+    __name__,
+    template_folder=os.path.join(os.path.dirname(__file__), 'templates'),
+    static_folder=os.path.join(os.path.dirname(__file__), 'static')
+)
 
 app.config['EXECUTOR_PROPAGATE_EXCEPTIONS'] = True
 executor = ThreadPoolExecutor(max_workers=4)
 
+# Importa blueprints después de crear la app
 from plume_tracker.core.routes import bp as core_bp
 app.register_blueprint(core_bp)
 
@@ -19,4 +23,7 @@ def favicon():
         'favicon.ico',
         mimetype='image/vnd.microsoft.icon'
     )
-handler = app
+
+# Exporta la app para Vercel
+app = app
+handler = app  # Asegúrate de que esta línea esté al final del archivo
