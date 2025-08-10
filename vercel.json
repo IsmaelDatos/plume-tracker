@@ -2,14 +2,12 @@
   "version": 2,
   "builds": [
     {
-      "src": "plume_tracker/app.py",
+      "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "15mb",
         "includeFiles": [
-          "plume_tracker/templates/**",
-          "plume_tracker/static/**",
-          "plume_tracker/core/**"
+          "plume_tracker/**"
         ]
       }
     }
@@ -17,11 +15,11 @@
   "routes": [
     {
       "src": "/static/(.*)",
-      "dest": "/static/$1"
+      "dest": "/plume_tracker/static/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "plume_tracker/app.py"
+      "dest": "api/index.py"
     }
   ]
 }

@@ -1,4 +1,5 @@
 import os
+import sys
 from flask import Flask, send_from_directory
 from concurrent.futures import ThreadPoolExecutor
 
@@ -16,6 +17,10 @@ executor = ThreadPoolExecutor(max_workers=4)
 from plume_tracker.core.routes import bp as core_bp
 app.register_blueprint(core_bp)
 
+@app.route('/static/<path:path>')
+def serve_static(path):
+    return send_from_directory(os.path.join(app.root_path, 'static'), path)
+
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(
@@ -24,6 +29,6 @@ def favicon():
         mimetype='image/vnd.microsoft.icon'
     )
 
-# Exporta la app para Vercel
-app = app
-handler = app  # Asegúrate de que esta línea esté al final del archivo
+# Para desarrollo local
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
