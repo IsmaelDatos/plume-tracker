@@ -16,7 +16,6 @@ def create_app():
     from .core.routes import bp as core_bp
     app.register_blueprint(core_bp)
 
-    # Añade esta ruta para el favicon
     @app.route('/favicon.ico')
     def favicon():
         return send_from_directory(
@@ -26,3 +25,8 @@ def create_app():
         )
 
     return app
+
+app = create_app()
+handler = app
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)

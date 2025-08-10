@@ -3,7 +3,14 @@
   "builds": [
     {
       "src": "plume_tracker/app.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "15mb",
+        "includeFiles": [
+          "plume_tracker/templates/**",
+          "plume_tracker/static/**"
+        ]
+      }
     }
   ],
   "routes": [
