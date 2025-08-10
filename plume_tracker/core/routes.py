@@ -48,13 +48,13 @@ async def top_earners():
 def search_wallet():
     wallet_address = request.args.get('wallet_address', '').strip()
     if not wallet_address:
-        return redirect(url_for('core.home'))
+        return redirect('/')
     
     if not wallet_address.startswith('0x') or len(wallet_address) != 42:
         return render_template('index.html', 
                             search_error="Invalid wallet address format (should start with 0x and be 42 characters)")
 
-    return redirect(url_for('core.wallet_details', wallet_address=wallet_address))
+    return redirect(f'/wallet/{wallet_address}')
 
 
 @bp.route('/wallet/<wallet_address>')

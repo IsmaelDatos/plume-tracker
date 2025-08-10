@@ -2,30 +2,18 @@
   "version": 2,
   "builds": [
     {
-      "src": "plume_tracker/api/app.py",
+      "src": "plume_tracker/app.py",
       "use": "@vercel/python"
-    },
-    {
-      "src": "plume_tracker/static/**",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "plume_tracker/templates/**",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
-    {
-      "src": "/api/.*",
-      "dest": "/plume_tracker/api/app.py"
-    },
     {
       "src": "/static/(.*)",
       "dest": "/plume_tracker/static/$1"
     },
     {
-      "src": "/(.*)", 
-      "dest": "/plume_tracker/templates/index.html"
+      "src": "/(.*)",
+      "dest": "/plume_tracker/app.py"
     }
   ]
 }

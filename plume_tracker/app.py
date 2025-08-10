@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, send_from_directory
 from concurrent.futures import ThreadPoolExecutor
 
 def create_app():
@@ -15,5 +15,14 @@ def create_app():
 
     from .core.routes import bp as core_bp
     app.register_blueprint(core_bp)
+
+    # Añade esta ruta para el favicon
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory(
+            os.path.join(app.root_path, 'static'),
+            'favicon.ico',
+            mimetype='image/vnd.microsoft.icon'
+        )
 
     return app
