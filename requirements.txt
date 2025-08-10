@@ -4,3 +4,5 @@ python-dotenv
 aiohttp==3.9.3
 pandas==2.2.1
 nest-asyncio==1.6.0
+gunicorn
+python-dateutil>=2.8.2

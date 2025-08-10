@@ -13,37 +13,37 @@ async function fetchTopEarners() {
     const progressStatus = document.getElementById('progress-status');
     const progressPercentage = document.getElementById('progress-percentage');
 
-    // Reset UI
     resetUI();
 
     try {
-        let progress = 0;
-        const total = 100;
-        const pollInterval = 2000;
+        // Llamada inicial para iniciar análisis
+        let response = await fetch('/api/top-earners');
+        if (!response.ok) throw new Error('Error al iniciar el análisis');
 
-        const poll = async () => {
-            try {
-                const response = await fetch('/api/app');
-                const data = await response.json();
+        progressStatus.textContent = 'Analizando wallets...';
+        progressPercentage.textContent = '0%';
+        progressBar.style.width = '10%';
 
-                if (response.ok) {
-                    progress += 10;
-                    if (progress < total) {
-                        updateProgress(progress, total, `Procesando... ${progress}%`);
-                        setTimeout(poll, pollInterval);
-                    } else {
-                        renderTable(data);
-                        showCompletion({ total_wallets: data.length, processing_time: "Simulado" });
-                    }
-                } else {
-                    showError(data.error || "Error del servidor");
+        // Polling para verificar si ya hay resultados
+        const checkResults = async () => {
+            response = await fetch('/api/top-earners');
+            const data = await response.json();
+
+            if (Array.isArray(data) && data.length > 0) {
+                renderTable(data);
+                showCompletion({ total_wallets: data.length, processing_time: "Calculando..." });
+            } else {
+                // Actualiza visualmente el progreso cada intento
+                const currentWidth = parseInt(progressBar.style.width) || 10;
+                if (currentWidth < 90) {
+                    progressBar.style.width = `${currentWidth + 10}%`;
+                    progressPercentage.textContent = `${currentWidth + 10}%`;
                 }
-            } catch (error) {
-                showError("Error de conexión");
+                setTimeout(checkResults, 2000); // Esperar 2s y volver a intentar
             }
         };
 
-        poll();
+        await checkResults();
 
     } catch (error) {
         showError(error.message);
@@ -67,17 +67,11 @@ async function fetchTopEarners() {
         progressStatus.textContent = 'Conectando con el servidor...';
     }
 
-    function updateProgress(current, total, message) {
-        const percent = Math.round(current * 100 / total);
-        progressBar.style.width = `${percent}%`;
-        progressPercentage.textContent = `${percent}%`;
-        progressStatus.textContent = message;
-    }
-
     function showCompletion(data) {
+        progressBar.style.width = '100%';
+        progressPercentage.textContent = '100%';
         progressStatus.innerHTML = `✅ Análisis completado!<br>
             <span class="text-sm">${data.total_wallets} wallets procesadas</span>`;
-        progressPercentage.textContent = '100%';
 
         const timeInfo = document.createElement('div');
         timeInfo.className = 'text-sm text-green-600 mt-2 text-center font-medium';
@@ -117,9 +111,6 @@ async function fetchTopEarners() {
     }
 
     function renderTable(items) {
-        const tableBody = document.getElementById('table-body');
-        if (!tableBody) return;
-
         tableBody.innerHTML = '';
 
         items.forEach((item, index) => {

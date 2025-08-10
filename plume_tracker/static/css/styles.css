@@ -1,0 +1,203 @@
+body {
+  font-family: 'Poppins', sans-serif;
+}
+/* Animaciones */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* Transiciones */
+.transition-all {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+/* Loader personalizado */
+.loader {
+    border-top-color: #1a1a00;
+    animation: spin 1s linear infinite;
+}
+
+/* Efectos hover */
+.wallet-address {
+    transition: color 0.2s ease;
+}
+
+.wallet-address:hover {
+    color: #1a1a00;
+    cursor: pointer;
+}
+
+/* Botón de copiar */
+.copy-btn {
+    transition: all 0.2s ease;
+    opacity: 0;
+}
+
+tr:hover .copy-btn {
+    opacity: 1;
+}
+
+/* Efecto de aparición para las filas */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+tr {
+    animation: fadeIn 0.3s ease forwards;
+    opacity: 0;
+}
+/* Barra de progreso */
+#progress-container {
+    transition: all 0.3s ease;
+}
+
+#progress-bar {
+    transition: width 0.5s ease;
+}
+
+/* Botón principal */
+#fetch-top-earners {
+    transition: all 0.2s ease;
+}
+
+#fetch-top-earners:disabled {
+    opacity: 0.7;
+    transform: none !important;
+}
+
+/* Efecto de pulso cuando está activo */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(26, 26, 0, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(26, 26, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(26, 26, 0, 0); }
+}
+
+#fetch-top-earners:enabled:hover {
+    animation: pulse 1.5s infinite;
+}
+
+/* Mensaje de tiempo */
+.time-info {
+    opacity: 0;
+    animation: fadeIn 0.5s ease forwards 0.5s;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* Wallet table specific styles */
+.table-hover tr:hover td {
+    transition: background-color 0.2s ease;
+}
+
+.wallet-highlight {
+    background-color: #f3f4f6 !important;  /* bg-gray-100 */
+    position: relative;
+}
+
+.wallet-highlight::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: #1a1a00;  /* Color brand */
+}
+
+.text-difference-positive {
+    color: #10b981;  /* green-600 */
+}
+
+.text-difference-negative {
+    color: #ef4444;  /* red-600 */
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* GitHub Style Heatmap */
+.contribution-grid {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+
+.contribution-day {
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    border: 1px solid rgba(27, 31, 35, 0.06);
+    position: relative;
+}
+
+.contribution-day:hover {
+    transform: scale(1.2);
+    z-index: 10;
+    border-color: rgba(27, 31, 35, 0.3);
+}
+
+.contribution-day::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    white-space: nowrap;
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.2s ease;
+    z-index: 20;
+}
+
+.contribution-day:hover::after {
+    visibility: visible;
+    opacity: 1;
+    bottom: 120%;
+}
+/* Heatmap month labels */
+.month-label {
+    position: absolute;
+    top: -20px;
+    text-align: left;
+    font-size: 11px;
+    color: #767676;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.heatmap-month-container {
+    position: relative;
+    display: inline-block;
+    vertical-align: top;
+}

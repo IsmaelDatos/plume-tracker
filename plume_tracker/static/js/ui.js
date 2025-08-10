@@ -9,11 +9,17 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   form.addEventListener('submit', (e) => {
-    e.preventDefault();
     const wallet = input.value.trim();
-    if (wallet) {
-      alert('Buscando wallet: ' + wallet);
-      // Aquí se podría implementar búsqueda en el backend si deseas
+    if (!wallet) {
+      e.preventDefault();
+      alert('Please enter a wallet address');
+      return;
     }
+    if (!/^0x[a-fA-F0-9]{40}$/.test(wallet)) {
+      e.preventDefault();
+      alert('Please enter a valid Ethereum wallet address (starting with 0x)');
+      return;
+    }
+    alert('Buscando wallet: ' + wallet);
   });
 });

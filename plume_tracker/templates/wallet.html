@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wallet {{ wallet }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body class="bg-[#e8e8e8] min-h-screen flex flex-col items-center">
+    <nav class="mt-8 w-[90vw] max-w-[900px] border-2 border-gray-600 rounded-full flex items-center justify-between px-6 py-2 bg-white shadow-lg">
+        <a href="/" class="font-bold text-lg">Plume tracker</a>
+        <ul class="flex space-x-8 text-base font-normal font-sans">
+            <li><a href="/">Home</a></li>
+            <li>S2 Stats</li>
+            <li>Sybil analysis</li>
+        </ul>
+        <a href="https://portal.plume.org/?referrer=XanthicReliablePot183" class="bg-[#1a1a00] text-white font-bold rounded-full px-5 py-2 text-base hover:bg-black transition">
+            Enter portal
+        </a>
+    </nav>
+    <main class="w-full max-w-[900px] mt-10 p-6 bg-white rounded-xl shadow-lg">
+        <div class="mb-8 p-4 border border-gray-200 rounded-lg bg-gray-50">
+            <h1 class="text-2xl font-bold mb-2 flex items-center">
+                <i class="fas fa-wallet mr-3 text-[#1a1a00]"></i>
+                Wallet Analysis
+            </h1>
+            <div class="flex items-center justify-between">
+                <div class="font-mono text-lg">
+                    <span class="wallet-address" title="{{ wallet }}">
+                        {{ wallet[:6] }}...{{ wallet[-4:] }}
+                    </span>
+                    <button onclick="copyWallet('{{ wallet }}')" class="copy-btn ml-2 text-gray-400 hover:text-[#1a1a00]">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                {% if xp_rank %}
+                <span class="bg-[#1a1a00] text-white px-3 py-1 rounded-full text-sm font-bold">
+                    Rank #{{ xp_rank }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if error %}
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+                <i class="fas fa-exclamation-circle mr-2"></i>
+                {{ error }}
+            </div>
+            <a href="/" class="text-[#1a1a00] hover:underline">
+                <i class="fas fa-arrow-left mr-1"></i> Volver al inicio
+            </a>
+        {% else %}
+            <div class="mb-4">
+                <h2 class="text-xl font-bold mb-2 flex items-center">
+                    <i class="fas fa-trophy mr-2 text-[#1a1a00]"></i>
+                    Leaderboard Context
+                </h2>
+                <p class="text-gray-600 mb-4">
+                    Showing wallets around rank {{ xp_rank }}
+                </p>
+            </div>
+            <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Rank</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Wallet</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Plume Points</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">TVL (USD)</th>
+                            <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Points Difference</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for row in leaderboard %}
+                        <tr class="{% if row.walletAddress.lower() == wallet.lower() %}bg-gray-100 font-medium{% else %}hover:bg-gray-50{% endif %}">
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                                {{ row.xpRank }}
+                                {% if row.walletAddress.lower() == wallet.lower() %}
+                                <span class="ml-1 text-[#1a1a00]">(YOU)</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm font-mono">
+                                {{ row.walletAddress[:6] }}...{{ row.walletAddress[-4:] }}
+                                <button onclick="copyWallet('{{ row.walletAddress }}')" 
+                                        class="copy-btn ml-2 text-gray-400 hover:text-[#1a1a00]">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
+                                {{ "{:,.0f}".format(row.totalXp) }}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
+                                ${{ "{:,.2f}".format(row.TVL) }}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-right">
+                                {% if row.walletAddress.lower() == wallet.lower() %}
+                                <span class="text-gray-500">-</span>
+                                {% else %}
+                                <span class="{% if row.pointsDifference > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                                    {{ "{:+,.0f}".format(row.pointsDifference) }}
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if heatmap_data %}            
+                {% include 'components/github_style_heatmap.html' %}
+            {% else %}
+                <div class="mt-8 p-4 bg-yellow-50 text-yellow-800 rounded-lg">
+                    <i class="fas fa-exclamation-circle mr-2"></i>
+                    No activity data available for this wallet
+                </div>
+            {% endif %}
+        {% endif %}
+    </main>
+
+    <script>
+        function copyWallet(wallet) {
+            navigator.clipboard.writeText(wallet);
+            const buttons = document.querySelectorAll(`button[onclick="copyWallet('${wallet}')"]`);
+            buttons.forEach(btn => {
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.className = 'fas fa-check text-green-500';
+                    setTimeout(() => {
+                        icon.className = 'fas fa-copy';
+                        icon.classList.remove('text-green-500');
+                    }, 2000);
+                }
+            });
+        }
+    </script>
+</body>
+</html>
