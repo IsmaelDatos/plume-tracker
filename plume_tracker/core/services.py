@@ -5,6 +5,7 @@ import nest_asyncio
 import requests
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+import logging
 
 nest_asyncio.apply()
 
@@ -60,7 +61,6 @@ class PlumeService:
                 return wallet, active, delta
         except:
             return wallet, 0, 0
-
 
 class ActivityService:
     PLUME_EXPLORER_URL = "https://explorer.plume.org/api"
@@ -163,3 +163,83 @@ class ActivityService:
             return '#FF3200'
         else:
             return '#D10000'
+
+class S2StatsService:
+    PLUME_SUPPLY_S2 = 150_000_000
+    CMC_API_KEY = "47ac6248-576d-4347-b387-8f2ab39de057"
+    LEADERBOARD_URL = "https://portal-api.plume.org/api/v1/stats/leaderboard"
+    CMC_URL = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
+
+    @classmethod
+    async def get_s2_stats(cls):
+        try:
+            # Obtener datos del leaderboard
+            stats = await cls._fetch_leaderboard_stats()
+            
+            # Obtener precio de PLUME
+            plume_price = await cls._fetch_plume_price()
+            
+            # Calcular métricas
+            stats['plume_per_pp'] = cls.PLUME_SUPPLY_S2 / stats['total_xp'] if stats['total_xp'] else 0
+            stats['plume_price'] = plume_price
+            stats['supply_s2'] = cls.PLUME_SUPPLY_S2
+            
+            return stats
+        except Exception as e:
+            logging.error(f"Error getting S2 stats: {str(e)}")
+            return None
+
+    @classmethod
+    async def _fetch_leaderboard_stats(cls):
+        offset = 0
+        count_per_page = 2000
+        unique_wallets = set()
+        total_xp = 0
+        
+        async with aiohttp.ClientSession() as session:
+            while True:
+                params = {
+                    "offset": offset,
+                    "count": count_per_page,
+                    "overrideDay1Override": "false",
+                    "preview": "false"
+                }
+                
+                async with session.get(cls.LEADERBOARD_URL, params=params) as resp:
+                    if resp.status != 200:
+                        break
+                    data = await resp.json()
+                    leaderboard = data.get('data', {}).get('leaderboard', [])
+                    
+                    if not leaderboard:
+                        break
+                        
+                    for entry in leaderboard:
+                        wallet = entry.get('walletAddress')
+                        xp = entry.get('totalXp', 0)
+                        
+                        if wallet and xp > 0:
+                            unique_wallets.add(wallet)
+                            total_xp += xp
+                    
+                    offset += count_per_page
+        
+        return {
+            'total_wallets': len(unique_wallets),
+            'total_xp': total_xp,
+            'avg_pp': total_xp / len(unique_wallets) if unique_wallets else 0
+        }
+
+    @classmethod
+    async def _fetch_plume_price(cls):
+        try:
+            params = {"symbol": "PLUME", "convert": "USD"}
+            headers = {"X-CMC_PRO_API_KEY": cls.CMC_API_KEY}
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(cls.CMC_URL, headers=headers, params=params) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        return data["data"]["PLUME"]["quote"]["USD"]["price"]
+        except:
+            return None

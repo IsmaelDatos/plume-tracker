@@ -15,7 +15,7 @@
       <div class="font-bold text-lg">Plume tracker</div>
       <ul class="flex space-x-8 text-base font-normal font-sans">
         <li>Home</li>
-        <li>S2 Stats</li>
+        <li><a href="/s2-stats">S2 Stats</a></li>
         <li>Sybil analysis</li>
       </ul>
       <a href="https://portal.plume.org/?referrer=XanthicReliablePot183" class="bg-[#1a1a00] text-white font-bold rounded-full px-5 py-2 text-base hover:bg-black transition">
@@ -27,8 +27,8 @@
         <h2 class="text-xl font-bold text-black mb-2">
           Busca una wallet / <span class="font-normal">Search a wallet</span>
         </h2>
-        <form id="search-form" action="/search_wallet" method="POST" class="relative w-full">
-            <input id="wallet-search" name="wallet" type="text" placeholder="0xas21AZ..." 
+        <form id="search-form" action="{{ url_for('core.search_wallet') }}" method="GET" class="relative w-full">
+            <input id="wallet-search" name="wallet_address" type="text" placeholder="0xas21AZ..." 
                    class="w-full rounded-full border border-gray-300 bg-gray-100 py-3 pl-12 pr-10 text-black text-base font-sans focus:outline-none focus:ring-2 focus:ring-black transition-all" 
                    required
                    pattern="^0x[a-fA-F0-9]{40}$"

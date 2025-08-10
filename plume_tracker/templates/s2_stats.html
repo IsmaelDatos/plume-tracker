@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Plume S2 Stats</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body class="bg-[#e8e8e8] min-h-screen flex flex-col items-center">
+    <nav class="mt-8 w-[90vw] max-w-[900px] border-2 border-gray-600 rounded-full flex items-center justify-between px-6 py-2 bg-white shadow-lg">
+        <a href="/" class="font-bold text-lg">Plume tracker</a>
+        <ul class="flex space-x-8 text-base font-normal font-sans">
+            <li><a href="/">Home</a></li>
+            <li class="font-bold"><a href="/s2-stats">S2 Stats</a></li>
+            <li>Sybil analysis</li>
+        </ul>
+        <a href="https://portal.plume.org/?referrer=XanthicReliablePot183" class="bg-[#1a1a00] text-white font-bold rounded-full px-5 py-2 text-base hover:bg-black transition">
+            Enter portal
+        </a>
+    </nav>
+
+    <main class="w-full max-w-[900px] mt-10 p-6">
+        {% if error %}
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+                <i class="fas fa-exclamation-circle mr-2"></i>
+                {{ error }}
+            </div>
+        {% else %}
+            <div class="mb-8 text-center">
+                <h1 class="text-3xl font-bold mb-2">
+                    <i class="fas fa-chart-line text-[#1a1a00] mr-2"></i>
+                    Season 2 Statistics
+                </h1>
+                <p class="text-gray-600">
+                    Last updated: {{ now.strftime('%Y-%m-%d %H:%M UTC') }}
+                    <span class="text-xs text-gray-400 block mt-1">
+                        Data refreshes daily at 00:00 UTC
+                    </span>
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex items-center mb-2">
+                        <i class="fas fa-coins text-[#1a1a00] mr-2"></i>
+                        <h3 class="font-bold">Season Allocation</h3>
+                    </div>
+                    <p class="text-2xl font-bold">{{ "{:,.0f}".format(supply_s2) }} PLUME</p>
+                    <p class="text-xs text-gray-500 mt-1">Total tokens allocated for S2 airdrop</p>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex items-center mb-2">
+                        <i class="fas fa-wallet text-[#1a1a00] mr-2"></i>
+                        <h3 class="font-bold">Total Wallets</h3>
+                    </div>
+                    <p class="text-2xl font-bold">{{ "{:,.0f}".format(total_wallets) }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Unique wallets with XP in S2</p>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex items-center mb-2">
+                        <i class="fas fa-star text-[#1a1a00] mr-2"></i>
+                        <h3 class="font-bold">Total PP</h3>
+                    </div>
+                    <p class="text-2xl font-bold">{{ "{:,.0f}".format(total_xp) }}</p>
+                    <p class="text-xs text-gray-500 mt-1">All Plume Points accumulated</p>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex items-center mb-2">
+                        <i class="fas fa-calculator text-[#1a1a00] mr-2"></i>
+                        <h3 class="font-bold">Avg PP/Wallet</h3>
+                    </div>
+                    <p class="text-2xl font-bold">{{ "{:,.2f}".format(avg_pp) }}</p>
+                    <p class="text-xs text-gray-500 mt-1">Average points per wallet</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    <i class="fas fa-calculator text-[#1a1a00] mr-2"></i>
+                    Airdrop Calculator
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <div>
+                        <div class="mb-4">
+                            <label class="block text-gray-700 mb-2">Your Plume Points</label>
+                            <input type="number" id="user-pp" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a1a00]" placeholder="Enter your PP">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-gray-700 mb-2">Current PLUME Price</label>
+                            <div class="flex items-center">
+                                <input type="number" id="plume-price" value="{{ "%.6f"|format(plume_price) if plume_price else '0.0' }}" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1a1a00]">
+                                <span class="ml-2 text-gray-500">USD</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">
+                                {% if plume_price %}
+                                    Current price: ${{ "%.6f"|format(plume_price) }}
+                                {% else %}
+                                    Price data unavailable - using $0.00
+                                {% endif %}
+                            </p>
+                        </div>
+                        
+                        <button id="calculate-btn" class="bg-[#1a1a00] text-white font-bold rounded-full px-6 py-3 hover:bg-black transition w-full">
+                            Calculate Estimate
+                        </button>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <h3 class="font-bold mb-3 text-center">Estimated Airdrop</h3>
+                        
+                        <div class="space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">PLUME per PP:</span>
+                                <span class="font-mono" id="plume-per-pp">{{ "%.8f"|format(plume_per_pp) }}</span>
+                            </div>
+
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Your PLUME:</span>
+                                <span id="estimated-plume" class="font-mono">0.00</span>
+                            </div>
+
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">USD Value:</span>
+                                <span id="estimated-usd" class="font-mono">$0.00</span>
+                            </div>
+                            
+                            <div class="pt-3 mt-3 border-t border-gray-200 text-xs text-gray-500">
+                                <p class="mb-1">⚠️ These are estimates only</p>
+                                <p>Final airdrop amounts may vary based on final distribution rules and actual token price.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Disclaimer -->
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-yellow-400"></i>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700">
+                            <strong>Note:</strong> All data shown is calculated from current leaderboard statistics.
+                            This is not official financial advice and actual airdrop amounts may differ.
+                            Data updates daily at 00:00 UTC.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </main>
+<script src="/static/js/s2_calculator.js"></script> 
+</body>
+</html>
