@@ -20,7 +20,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/plume_tracker/app.py"
+      "dest": "plume_tracker/app.py"
     }
   ]
 }
