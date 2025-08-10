@@ -9,7 +9,7 @@ app = Flask(__name__,
 app.config['EXECUTOR_PROPAGATE_EXCEPTIONS'] = True
 executor = ThreadPoolExecutor(max_workers=4)
 
-from .core.routes import bp as core_bp
+from plume_tracker.core.routes import bp as core_bp
 app.register_blueprint(core_bp)
 
 @app.route('/favicon.ico')
