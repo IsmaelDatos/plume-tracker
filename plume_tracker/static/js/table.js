@@ -17,22 +17,22 @@ function startTopEarnersStream() {
     
     let fakeProgress = 0;
     const fakeProgressInterval = setInterval(() => {
-        if (fakeProgress < 85) {
-            fakeProgress += Math.random() * 3;
-            if (fakeProgress > 85) fakeProgress = 85;
+        if (fakeProgress < 80) {
+            fakeProgress += Math.random() * 2;
+            if (fakeProgress > 80) fakeProgress = 80;
             
             progressBar.style.width = `${fakeProgress}%`;
             progressPercentage.textContent = `${Math.round(fakeProgress)}%`;
             progressStatus.textContent = `Preparando datos... ${Math.round(fakeProgress)}%`;
-        } else if (fakeProgress < 90) {
-            fakeProgress += Math.random() * 0.1;
-            if (fakeProgress > 90) fakeProgress = 90;
+        } else if (fakeProgress < 95) {
+            fakeProgress += Math.random() * 0.3;
+            if (fakeProgress > 95) fakeProgress = 95;
             
             progressBar.style.width = `${fakeProgress}%`;
             progressPercentage.textContent = `${Math.round(fakeProgress)}%`;
             progressStatus.textContent = `Finalizando preparación... ${Math.round(fakeProgress)}%`;
         }
-    }, 1000);
+    }, 1500);
 
     const evtSource = new EventSource('/api/top-earners/stream');
 
