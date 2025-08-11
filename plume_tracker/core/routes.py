@@ -1,18 +1,19 @@
 import datetime
 import logging
 import requests
-from flask import Blueprint, jsonify, render_template, request, redirect, url_for
+from flask import Blueprint, jsonify, render_template, request, redirect, url_for, Response
 from .services import PlumeService, S2StatsService, ActivityService
+import asyncio
 
 bp = Blueprint('core', __name__, url_prefix='/')
 service = PlumeService()
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 PLUME_API_BASE = "https://portal-api.plume.org/api/v1/stats"
 HEADERS = {"User-Agent": "plume-tracker/1.0"}
 TIMEOUT = 30
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 @bp.route('/')
 def home():
@@ -39,10 +40,25 @@ async def s2_stats():
         now=datetime.datetime.utcnow()
     )
 
-@bp.route('/api/top-earners')
-async def top_earners():
-    results = await service.get_top_earners()
-    return jsonify(results)
+@bp.route('/api/top-earners/stream')
+def top_earners_stream():
+    def generate():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        async def run():
+            async for message in service.stream_top_earners():
+                yield f"data: {message}\n\n"
+        for chunk in loop.run_until_complete(_collect(run())):
+            yield chunk
+
+    return Response(generate(), mimetype='text/event-stream')
+
+async def _collect(agen):
+    """Convierte un async generator en lista para streaming en WSGI."""
+    items = []
+    async for x in agen:
+        items.append(x)
+    return items
 
 @bp.route('/search', methods=['GET'])
 def search_wallet():

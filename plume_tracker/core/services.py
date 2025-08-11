@@ -2,6 +2,7 @@ import aiohttp
 import asyncio
 import pandas as pd
 import nest_asyncio
+import json
 import requests
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
@@ -14,50 +15,88 @@ class PlumeService:
         self.leaderboard_url = "https://portal-api.plume.org/api/v1/stats/leaderboard"
         self.pp_totals_url = "https://portal-api.plume.org/api/v1/stats/pp-totals"
         self.headers = {"User-Agent": "plume-fast-scan/1.0"}
+        self.batch_size = 10000
+        self.concurrency = 250
+        self.timeout_secs = 30
+
+    async def stream_top_earners(self):
+        """Genera actualizaciones SSE con el progreso del cálculo."""
+        range_size = 50000
+        task1 = self._fetch_leaderboard_range(0, range_size)
+        task2 = self._fetch_leaderboard_range(range_size, 100000)
         
-    async def get_top_earners(self):
-        wallets = await self._fetch_leaderboard()
+        part1, part2 = await asyncio.gather(task1, task2)
+        wallets = part1 + part2
+        
         if not wallets:
-            return []
-            
+            yield json.dumps({"type": "error", "message": "No se pudieron obtener wallets"}) + "\n\n"
+            return
+
         sorted_wallets = sorted(wallets, key=lambda x: x[1], reverse=True)
-        rankings = {wallet: i+1 for i, (wallet, _) in enumerate(sorted_wallets)}
-        
+        rankings = {wallet: i + 1 for i, (wallet, _) in enumerate(sorted_wallets)}
+        total_wallets = len(sorted_wallets)
+
+        sem = asyncio.Semaphore(self.concurrency)
         results = []
-        async with aiohttp.ClientSession(headers=self.headers) as session:
-            tasks = [self._fetch_xp(session, wallet) for wallet, _ in sorted_wallets[:500]]  # Limit for demo
-            for future in asyncio.as_completed(tasks):
-                wallet, active, delta = await future
+
+        async with aiohttp.ClientSession(headers=self.headers, timeout=aiohttp.ClientTimeout(total=self.timeout_secs)) as session:
+            tasks = [self._fetch_xp_delta(session, wallet, sem) for wallet, _ in sorted_wallets]
+            completed = 0
+
+            for fut in asyncio.as_completed(tasks):
+                wallet, active, delta = await fut
                 results.append({
                     "wallet": wallet,
                     "Rank leaderboard": rankings[wallet],
-                    "PP total": active,
                     "Ganancia": delta
                 })
-                if len(results) >= 20:
-                    break
+                completed += 1
+                progress = int((completed / total_wallets) * 100)
 
-        return sorted(results, key=lambda x: x["Ganancia"], reverse=True)[:20]
-    
-    async def _fetch_leaderboard(self):
-        async with aiohttp.ClientSession(headers=self.headers) as session:
-            async with session.get(self.leaderboard_url, timeout=30) as resp:
-                if resp.status != 200:
-                    return []
-                data = await resp.json()
-                leaderboard = data.get('data', {}).get('leaderboard', [])
-                return [(entry.get('walletAddress'), entry.get('totalXp', 0)) for entry in leaderboard]
-        
-    async def _fetch_xp(self, session, wallet):
-        url = f"https://portal-api.plume.org/api/v1/stats/wallet?walletAddress={wallet}"
+                yield json.dumps({
+                    "type": "progress",
+                    "progress": progress,
+                    "completed": completed,
+                    "total": total_wallets
+                }) + "\n\n"
+
+        top_20 = sorted(results, key=lambda x: x["Ganancia"], reverse=True)[:20]
+        yield json.dumps({"type": "completed", "data": top_20}) + "\n\n"
+
+    async def _fetch_leaderboard_range(self, start_offset, end_offset):
+        wallets = []
+        offset = start_offset
+        async with aiohttp.ClientSession(headers=self.headers, timeout=aiohttp.ClientTimeout(total=self.timeout_secs)) as session:
+            while offset < end_offset:
+                params = {
+                    "offset": offset,
+                    "count": self.batch_size,
+                    "overrideDay1Override": "false",
+                    "preview": "false"
+                }
+                async with session.get(self.leaderboard_url, params=params) as r:
+                    data = await r.json()
+                    page = data.get("data", {}).get("leaderboard", [])
+                    if not page:
+                        break
+                    wallets.extend([
+                        (row["walletAddress"].lower(), row["totalXp"])
+                        for row in page if row["totalXp"] > 0
+                    ])
+                    if len(page) < self.batch_size:
+                        break
+                    offset += self.batch_size
+        return wallets
+
+    async def _fetch_xp_delta(self, session, wallet, sem):
+        url = f"{self.pp_totals_url}?walletAddress={wallet}"
         try:
-            async with session.get(url, timeout=15) as resp:
-                if resp.status != 200:
-                    return wallet, 0, 0
-                data = await resp.json()
-                stats = data.get('data', {}).get('stats', {})
-                active = stats.get('totalXp', 0)
-                delta = stats.get('deltaXp', 0)
+            async with sem, session.get(url) as resp:
+                js = await resp.json()
+                data = js.get("data", {}).get("ppScores", {})
+                active = data.get("activeXp", {}).get("totalXp", 0)
+                prev = data.get("prevXp", {}).get("totalXp", 0)
+                delta = active - prev
                 return wallet, active, delta
         except:
             return wallet, 0, 0
