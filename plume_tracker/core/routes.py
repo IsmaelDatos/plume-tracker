@@ -185,3 +185,7 @@ def wallet_details(wallet_address):
         return render_template('wallet.html',
                             wallet=wallet_address,
                             error="An unexpected error occurred")
+        
+@bp.route('/sybil-analysis')
+def sybil_analysis():
+    return render_template('sybil_analysis.html')

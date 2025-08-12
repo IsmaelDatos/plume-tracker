@@ -23,14 +23,14 @@ function startTopEarnersStream() {
             
             progressBar.style.width = `${fakeProgress}%`;
             progressPercentage.textContent = `${Math.round(fakeProgress)}%`;
-            progressStatus.textContent = `Preparando datos... ${Math.round(fakeProgress)}%`;
+            progressStatus.textContent = `Preparing data... ${Math.round(fakeProgress)}%`;
         } else if (fakeProgress < 95) {
             fakeProgress += Math.random() * 0.3;
             if (fakeProgress > 95) fakeProgress = 95;
             
             progressBar.style.width = `${fakeProgress}%`;
             progressPercentage.textContent = `${Math.round(fakeProgress)}%`;
-            progressStatus.textContent = `Finalizando preparación... ${Math.round(fakeProgress)}%`;
+            progressStatus.textContent = `Finishing preparation... ${Math.round(fakeProgress)}%`;
         }
     }, 1500);
 
@@ -45,7 +45,7 @@ function startTopEarnersStream() {
                 const realProgress = 90 + (msg.progress * 0.1);
                 progressBar.style.width = `${realProgress}%`;
                 progressPercentage.textContent = `${Math.round(realProgress)}%`;
-                progressStatus.textContent = `Procesando ${msg.completed}/${msg.total} wallets...`;
+                progressStatus.textContent = `Processing ${msg.completed}/${msg.total} wallets...`;
             }
 
             if (msg.type === "completed") {
@@ -53,7 +53,7 @@ function startTopEarnersStream() {
                 renderTable(msg.data);
                 progressBar.style.width = "100%";
                 progressPercentage.textContent = "100%";
-                progressStatus.textContent = "✅ Análisis completado!";
+                progressStatus.textContent = "✅ Complete analysis! ";
                 restoreButton();
                 evtSource.close();
             }
@@ -75,7 +75,7 @@ function startTopEarnersStream() {
         fetchBtn.disabled = true;
         fetchBtn.innerHTML = `<span class="flex items-center justify-center">
             <i class="fas fa-cog fa-spin mr-2"></i>
-            Preparando análisis...
+            Preparing analysis ...
         </span>`;
         progressContainer.classList.remove('hidden');
         progressBar.style.width = '0%';
@@ -87,7 +87,7 @@ function startTopEarnersStream() {
         fetchBtn.disabled = false;
         fetchBtn.innerHTML = `<span class="flex items-center justify-center">
             <i class="fas fa-redo mr-2"></i>
-            Volver a analizar
+            Re -analyze
         </span>`;
     }
 
@@ -127,7 +127,6 @@ function startTopEarnersStream() {
     }
 };
 
-// Esta función debe estar en el ámbito global, no dentro del DOMContentLoaded
 function copyWallet(wallet) {
     navigator.clipboard.writeText(wallet);
     const buttons = document.querySelectorAll(`button[onclick="copyWallet('${wallet}')"]`);
