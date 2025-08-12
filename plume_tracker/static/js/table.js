@@ -115,6 +115,9 @@ function startTopEarnersStream() {
                     <span class="wallet-address" title="${item.wallet}">
                         ${item.wallet.slice(0, 6)}...${item.wallet.slice(-4)}
                     </span>
+                    <button onclick="copyWallet('${item.wallet}')" class="copy-btn ml-2 text-gray-400 hover:text-[#1a1a00]">
+                        <i class="fas fa-copy"></i>
+                    </button>
                 </td>
                 <td class="px-4 py-3 border-b text-center">${item['Rank leaderboard']}</td>
                 <td class="px-4 py-3 border-b text-center">${item['Ganancia']}</td>
@@ -122,4 +125,20 @@ function startTopEarnersStream() {
             tableBody.appendChild(row);
         });
     }
+};
+
+// Esta función debe estar en el ámbito global, no dentro del DOMContentLoaded
+function copyWallet(wallet) {
+    navigator.clipboard.writeText(wallet);
+    const buttons = document.querySelectorAll(`button[onclick="copyWallet('${wallet}')"]`);
+    buttons.forEach(btn => {
+        const icon = btn.querySelector('i');
+        if (icon) {
+            icon.className = 'fas fa-check text-green-500';
+            setTimeout(() => {
+                icon.className = 'fas fa-copy';
+                icon.classList.remove('text-green-500');
+            }, 2000);
+        }
+    });
 }
