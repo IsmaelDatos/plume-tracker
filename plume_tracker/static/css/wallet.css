@@ -1,0 +1,194 @@
+.token-logo {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: contain;
+    margin-right: 6px;
+    transition: transform 0.2s ease;
+}
+
+.token-logo:hover {
+    transform: scale(1.1);
+}
+
+.staking-badge, .token-badge {
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.staking-badge {
+    background-color: #1a1a00;
+    color: white;
+}
+
+.token-badge {
+    background-color: #e5e7eb;
+    color: #4b5563;
+}
+
+.progress-container {
+    width: 60px;
+    height: 4px;
+    background-color: #e5e7eb;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #1a1a00;
+    transition: width 0.3s ease;
+}
+
+canvas#portfolioChart {
+    max-height: 400px;
+    width: 100% !important;
+}
+
+.compact-table {
+    font-size: 0.875rem;
+}
+
+.compact-table th, 
+.compact-table td {
+    padding: 0.5rem 0.75rem;
+}
+
+.value-balance-display {
+    line-height: 1.2;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .grid-cols-1 {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .compact-table {
+        font-size: 0.8rem;
+    }
+    
+    .compact-table th, 
+    .compact-table td {
+        padding: 0.4rem 0.5rem;
+    }
+}
+
+@keyframes valueUpdate {
+    0% { background-color: transparent; }
+    50% { background-color: rgba(26, 26, 0, 0.1); }
+    100% { background-color: transparent; }
+}
+
+.updated-value {
+    animation: valueUpdate 1.5s ease;
+}
+
+.error-placeholder {
+    color: #999;
+    font-style: italic;
+}
+
+.null-value {
+    background-color: rgba(239, 68, 68, 0.1);
+    animation: pulseWarning 1.5s infinite;
+}
+
+@keyframes pulseWarning {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.bg-red-gradient {
+    background: linear-gradient(135deg, #FF3200 0%, #FF8130 50%, #FFC38B 100%);
+}
+
+.text-red-gradient {
+    background: linear-gradient(135deg, #FF3200 0%, #FF8130 50%, #FFC38B 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.border-red-gradient {
+    border-image: linear-gradient(135deg, #FF3200 0%, #FF8130 50%, #FFC38B 100%);
+    border-image-slice: 1;
+}
+
+/* Ajustes para la tabla de portfolio */
+.compact-table {
+    font-size: 0.875rem;
+}
+
+.compact-table th, 
+.compact-table td {
+    padding: 0.5rem 0.75rem;
+}
+
+.token-logo {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: contain;
+    margin-right: 6px;
+}
+
+.staking-badge {
+    background-color: #FF3200;
+    color: white;
+    padding: 0.15rem 0.4rem;
+    font-size: 0.7rem;
+    border-radius: 0.25rem;
+}
+
+.token-badge {
+    background-color: #e5e7eb;
+    color: #4b5563;
+    padding: 0.15rem 0.4rem;
+    font-size: 0.7rem;
+    border-radius: 0.25rem;
+}
+
+.progress-container {
+    width: 60px;
+    height: 4px;
+    background-color: #e5e7eb;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #FF3200 0%, #FFC38B 100%);
+}
+
+.wallet-address {
+    font-family: monospace;
+}
+
+.copy-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.copy-btn:hover {
+    color: #FF3200;
+}

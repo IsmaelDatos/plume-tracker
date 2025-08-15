@@ -1,9 +1,7 @@
-/* Tailwind Render Fix */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Smooth Rendering Fix */
 html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
@@ -15,7 +13,6 @@ body {
   overscroll-behavior-y: contain;
 }
 
-/* Hardware Acceleration for Animations */
 .animate-fix {
   transform: translateZ(0);
   backface-visibility: hidden;
@@ -24,7 +21,6 @@ body {
 body {
   font-family: 'Poppins', sans-serif;
 }
-/* Animaciones */
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
@@ -33,20 +29,17 @@ body {
     animation: spin 1s linear infinite;
 }
 
-/* Transiciones */
 .transition-all {
     transition-property: all;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
 }
 
-/* Loader personalizado */
 .loader {
     border-top-color: #1a1a00;
     animation: spin 1s linear infinite;
 }
 
-/* Efectos hover */
 .wallet-address {
     transition: color 0.2s ease;
 }
@@ -56,7 +49,6 @@ body {
     cursor: pointer;
 }
 
-/* Botón de copiar */
 .copy-btn {
     transition: all 0.2s ease;
     opacity: 0;
@@ -66,7 +58,6 @@ tr:hover .copy-btn {
     opacity: 1;
 }
 
-/* Efecto de aparición para las filas */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -76,7 +67,7 @@ tr {
     animation: fadeIn 0.3s ease forwards;
     opacity: 0;
 }
-/* Barra de progreso */
+
 #progress-container {
     transition: all 0.3s ease;
 }
@@ -85,7 +76,6 @@ tr {
     transition: width 0.5s ease;
 }
 
-/* Botón principal */
 #fetch-top-earners {
     transition: all 0.2s ease;
 }
@@ -95,7 +85,6 @@ tr {
     transform: none !important;
 }
 
-/* Efecto de pulso cuando está activo */
 @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(26, 26, 0, 0.4); }
     70% { box-shadow: 0 0 0 10px rgba(26, 26, 0, 0); }
@@ -106,31 +95,17 @@ tr {
     animation: pulse 1.5s infinite;
 }
 
-/* Mensaje de tiempo */
 .time-info {
     opacity: 0;
     animation: fadeIn 0.5s ease forwards 0.5s;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-/* Wallet table specific styles */
 .table-hover tr:hover td {
     transition: background-color 0.2s ease;
 }
 
 .wallet-highlight {
-    background-color: #f3f4f6 !important;  /* bg-gray-100 */
+    background-color: #f3f4f6 !important; 
     position: relative;
 }
 
@@ -141,30 +116,17 @@ tr {
     top: 0;
     bottom: 0;
     width: 3px;
-    background-color: #1a1a00;  /* Color brand */
+    background-color: #1a1a00; 
 }
 
 .text-difference-positive {
-    color: #10b981;  /* green-600 */
+    color: #10b981; 
 }
 
 .text-difference-negative {
-    color: #ef4444;  /* red-600 */
+    color: #ef4444; 
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-/* GitHub Style Heatmap */
 .contribution-grid {
     display: inline-flex;
     flex-wrap: wrap;
@@ -208,7 +170,7 @@ tr {
     opacity: 1;
     bottom: 120%;
 }
-/* Heatmap month labels */
+
 .month-label {
     position: absolute;
     top: -20px;
@@ -225,13 +187,6 @@ tr {
     vertical-align: top;
 }
 
-
-
-
-
-
-
-/* Modal animations */
 @keyframes modalFadeIn {
   from { opacity: 0; transform: translateY(-20px); }
   to { opacity: 1; transform: translateY(0); }
@@ -241,7 +196,6 @@ tr {
   animation: modalFadeIn 0.3s ease-out forwards;
 }
 
-/* Copy notification */
 @keyframes fade-in-out {
   0% { opacity: 0; transform: translateY(10px); }
   20% { opacity: 1; transform: translateY(0); }
@@ -253,13 +207,10 @@ tr {
   animation: fade-in-out 2s ease forwards;
 }
 
-/* Smooth transitions for modal */
 .modal-content {
   transition: all 0.3s ease;
 }
 
-
-/* Navbar sticky styles */
 .sticky-nav {
   position: fixed;
   top: 0;
