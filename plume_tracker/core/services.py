@@ -7,6 +7,8 @@ import requests
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 import logging
+import concurrent.futures
+import time
 
 nest_asyncio.apply()
 
@@ -208,66 +210,117 @@ class S2StatsService:
     CMC_API_KEY = "47ac6248-576d-4347-b387-8f2ab39de057"
     LEADERBOARD_URL = "https://portal-api.plume.org/api/v1/stats/leaderboard"
     CMC_URL = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest"
+    
+    COUNT_PER_PAGE = 10000
+    TIMEOUT_SECONDS = 30
+    MIN_WALLETS = 240000
+    BATCH_SIZE = 20000
+    MAX_WORKERS = 8
+
+    @classmethod
+    def _fetch_wallet_batch(cls, start_offset, count):
+        params = {
+            "offset": start_offset,
+            "count": count,
+            "walletAddress": "undefined",
+            "overrideDay1Override": "false",
+            "preview": "false",
+        }
+        try:
+            r = requests.get(cls.LEADERBOARD_URL, params=params, timeout=cls.TIMEOUT_SECONDS)
+            r.raise_for_status()
+            return r.json().get("data", {}).get("leaderboard", [])
+        except:
+            return []
+
+    @classmethod
+    def _find_last_active_offset(cls):
+        current_offset = cls.MIN_WALLETS
+        step = cls.COUNT_PER_PAGE
+        last_active = cls.MIN_WALLETS
+        
+        # Búsqueda lineal por bloques grandes
+        while True:
+            batch = cls._fetch_wallet_batch(current_offset, 1)
+            if not batch or batch[0].get("totalXp", 0) == 0:
+                break
+            last_active = current_offset
+            current_offset += step
+        
+        # Búsqueda binaria para encontrar el último activo exacto
+        low = last_active
+        high = last_active + step
+        while low <= high:
+            mid = (low + high) // 2
+            batch = cls._fetch_wallet_batch(mid, 1)
+            if batch and batch[0].get("totalXp", 0) > 0:
+                low = mid + 1
+                last_active = mid
+            else:
+                high = mid - 1
+        
+        return last_active
+
+    @classmethod
+    def _process_batch(cls, start_offset, count):
+        data = cls._fetch_wallet_batch(start_offset, count)
+        wallets = set()
+        xp_total = 0
+        for wallet in data:
+            xp = wallet.get("totalXp", 0)
+            if xp == 0:
+                continue
+            address = wallet.get("walletAddress")
+            if address not in wallets:
+                wallets.add(address)
+                xp_total += xp
+        return wallets, xp_total
+
+    @classmethod
+    def _parallel_process_wallets(cls, total_wallets):
+        batches = []
+        for start in range(0, total_wallets, cls.BATCH_SIZE):
+            end = min(start + cls.BATCH_SIZE, total_wallets)
+            batches.append((start, end - start))
+        
+        all_wallets = set()
+        total_xp = 0
+        with concurrent.futures.ThreadPoolExecutor(max_workers=cls.MAX_WORKERS) as executor:
+            futures = [executor.submit(cls._process_batch, start, count) for start, count in batches]
+            for future in concurrent.futures.as_completed(futures):
+                wallets, xp_sum = future.result()
+                all_wallets.update(wallets)
+                total_xp += xp_sum
+        
+        return all_wallets, total_xp
 
     @classmethod
     async def get_s2_stats(cls):
         try:
-            # Obtener datos del leaderboard
-            stats = await cls._fetch_leaderboard_stats()
+            start_time = time.time()
+            
+            # Encontrar último offset activo
+            last_active_offset = cls._find_last_active_offset()
+            total_wallets_est = last_active_offset + 1
+            
+            # Procesar wallets en paralelo
+            wallets, total_xp = cls._parallel_process_wallets(total_wallets_est)
+            avg_pp = total_xp / len(wallets) if wallets else 0
             
             # Obtener precio de PLUME
             plume_price = await cls._fetch_plume_price()
             
-            # Calcular métricas
-            stats['plume_per_pp'] = cls.PLUME_SUPPLY_S2 / stats['total_xp'] if stats['total_xp'] else 0
-            stats['plume_price'] = plume_price
-            stats['supply_s2'] = cls.PLUME_SUPPLY_S2
-            
-            return stats
+            return {
+                'total_wallets': len(wallets),
+                'total_xp': total_xp,
+                'avg_pp': avg_pp,
+                'plume_per_pp': cls.PLUME_SUPPLY_S2 / total_xp if total_xp else 0,
+                'plume_price': plume_price,
+                'supply_s2': cls.PLUME_SUPPLY_S2
+            }
         except Exception as e:
             logging.error(f"Error getting S2 stats: {str(e)}")
             return None
-
-    @classmethod
-    async def _fetch_leaderboard_stats(cls):
-        offset = 0
-        count_per_page = 2000
-        unique_wallets = set()
-        total_xp = 0
-        
-        async with aiohttp.ClientSession() as session:
-            while True:
-                params = {
-                    "offset": offset,
-                    "count": count_per_page,
-                    "overrideDay1Override": "false",
-                    "preview": "false"
-                }
-                
-                async with session.get(cls.LEADERBOARD_URL, params=params) as resp:
-                    if resp.status != 200:
-                        break
-                    data = await resp.json()
-                    leaderboard = data.get('data', {}).get('leaderboard', [])
-                    
-                    if not leaderboard:
-                        break
-                        
-                    for entry in leaderboard:
-                        wallet = entry.get('walletAddress')
-                        xp = entry.get('totalXp', 0)
-                        
-                        if wallet and xp > 0:
-                            unique_wallets.add(wallet)
-                            total_xp += xp
-                    
-                    offset += count_per_page
-        
-        return {
-            'total_wallets': len(unique_wallets),
-            'total_xp': total_xp,
-            'avg_pp': total_xp / len(unique_wallets) if unique_wallets else 0
-        }
 
     @classmethod
     async def _fetch_plume_price(cls):
