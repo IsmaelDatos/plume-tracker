@@ -9,19 +9,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
 </head>
 <body class="bg-[#e8e8e8] min-h-screen flex flex-col items-center">
-    <nav class="mt-8 w-[90vw] max-w-[900px] border-2 border-gray-600 rounded-full flex items-center justify-between px-6 py-2 bg-white shadow-lg">
-        <a href="/" class="font-bold text-lg">Plume tracker</a>
-        <ul class="flex space-x-8 text-base font-normal font-sans">
-            <li><a href="/">Home</a></li>
-            <li><a href="/s2-stats">S2 Stats</a></li>
-            <li><a href="/sybil-analysis">Sybil analysis</a></li>
-        </ul>
-        <a href="https://portal.plume.org/?referrer=XanthicReliablePot183" class="bg-[#1a1a00] text-white font-bold rounded-full px-5 py-2 text-base hover:bg-black transition">
-            Enter portal
-        </a>
-    </nav>
+    {% include 'components/navbar.html' %}
+
     <main class="w-full max-w-[900px] mt-10 p-6 bg-white rounded-xl shadow-lg">
         <div class="mb-8 p-4 border border-gray-200 rounded-lg bg-gray-50">
             <h1 class="text-2xl font-bold mb-2 flex items-center">
@@ -121,21 +113,6 @@
         {% endif %}
     </main>
 
-    <script>
-        function copyWallet(wallet) {
-            navigator.clipboard.writeText(wallet);
-            const buttons = document.querySelectorAll(`button[onclick="copyWallet('${wallet}')"]`);
-            buttons.forEach(btn => {
-                const icon = btn.querySelector('i');
-                if (icon) {
-                    icon.className = 'fas fa-check text-green-500';
-                    setTimeout(() => {
-                        icon.className = 'fas fa-copy';
-                        icon.classList.remove('text-green-500');
-                    }, 2000);
-                }
-            });
-        }
-    </script>
+    <script src="{{ url_for('static', filename='js/wallet-utils.js') }}"></script>
 </body>
 </html>

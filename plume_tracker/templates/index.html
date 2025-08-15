@@ -1,48 +1,99 @@
 <!DOCTYPE html>
-<html lang="es">
-  <head>
-    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Plume tracker</title>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Plume Tracker</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
-  </head>
-  <body class="bg-[#e8e8e8] min-h-screen flex flex-col items-center">
-    <nav class="mt-8 w-[90vw] max-w-[900px] border-2 border-gray-600 rounded-full flex items-center justify-between px-6 py-2 bg-white shadow-lg">
-      <div class="font-bold text-lg">Plume tracker</div>
-      <ul class="flex space-x-8 text-base font-normal font-sans">
-        <li>Home</li>
-        <li><a href="/s2-stats">S2 Stats</a></li>
-        <li><a href="/sybil-analysis">Sybil analysis</a></li>
-      </ul>
-      <a href="https://portal.plume.org/?referrer=XanthicReliablePot183" class="bg-[#1a1a00] text-white font-bold rounded-full px-5 py-2 text-base hover:bg-black transition">
-        Enter portal
-      </a>
-    </nav>
-    <main class="flex-grow w-full flex flex-col items-center mt-20 px-4">
-      <div class="flex flex-col items-center w-full max-w-[700px] mb-16 text-center">
-        <h2 class="text-xl font-bold text-black mb-2">
-          Busca una wallet / <span class="font-normal">Search a wallet</span>
-        </h2>
-        <form id="search-form" action="/search" method="GET" class="relative w-full">
-            <input id="wallet-search" name="wallet_address" type="text" placeholder="0xas21AZ..." 
-                   class="w-full rounded-full border border-gray-300 bg-gray-100 py-3 pl-12 pr-10 text-black text-base font-sans focus:outline-none focus:ring-2 focus:ring-black transition-all" 
-                   required
-                   pattern="^0x[a-fA-F0-9]{40}$"
-                   title="Please enter a valid Ethereum wallet address (0x...)">
-            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg pointer-events-none"></i>
-            <button type="button" id="clear-btn" aria-label="Clear search" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg hover:text-black transition-colors">
-                <i class="fas fa-times"></i>
-            </button>
-        </form>
+<body class="bg-[#e8e8e8] min-h-screen flex flex-col items-center">
+  <!-- Donation Modal -->
+  <div id="donation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+      <div class="flex justify-between items-start mb-4">
+        <h3 class="text-lg font-bold text-[#1a1a00]">
+          <i class="fas fa-heart mr-2"></i> Support This Project
+        </h3>
+        <button id="close-modal" class="text-gray-500 hover:text-gray-700">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
-      {% include 'components/table.html' %}
-    </main>
-    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/table.js') }}"></script>
-  </body>
+      
+      <p class="text-gray-600 mb-4 text-sm">
+        Running this service costs about $20/month. If you find it useful, 
+        any donation amount helps keep it online. Thank you for your support!
+      </p>
+      
+      <div class="bg-gray-100 p-3 rounded-lg mb-4">
+        <div class="flex items-center justify-between">
+          <span class="font-mono text-sm truncate">0x51D980D1d3f16d56eDd241f8029C53d35D17756c</span>
+          <div class="flex space-x-2">
+            <button onclick="copyWallet('0x51D980D1d3f16d56eDd241f8029C53d35D17756c')" 
+                    class="text-gray-500 hover:text-[#1a1a00]">
+              <i class="fas fa-copy"></i>
+            </button>
+            <a href="https://etherscan.io/address/0x51D980D1d3f16d56eDd241f8029C53d35D17756c" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               class="text-gray-500 hover:text-[#1a1a00]">
+              <i class="fas fa-external-link-alt"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <div class="text-xs text-gray-500 text-center">
+        <i class="fas fa-info-circle mr-1"></i> This message will show on page load
+      </div>
+    </div>
+  </div>
+
+  <!-- Navbar -->
+  {% include 'components/navbar.html' %}
+
+  <!-- Main Content -->
+  <main class="flex-grow w-full flex flex-col items-center mt-20 px-4">
+    <!-- Search Section -->
+    <div class="flex flex-col items-center w-full max-w-[700px] mb-16 text-center">
+      <h2 class="text-xl font-bold text-black mb-2">
+        Busca una wallet / <span class="font-normal">Search a wallet</span>
+      </h2>
+      
+      <form id="search-form" action="/search" method="GET" class="relative w-full">
+        <input id="wallet-search" 
+               name="wallet_address" 
+               type="text" 
+               placeholder="0xas21AZ..." 
+               class="w-full rounded-full border border-gray-300 bg-gray-100 py-3 pl-12 pr-10 text-black text-base font-sans focus:outline-none focus:ring-2 focus:ring-black transition-all" 
+               required
+               pattern="^0x[a-fA-F0-9]{40}$"
+               title="Please enter a valid Ethereum wallet address (0x...)">
+               
+        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg pointer-events-none"></i>
+        
+        <button type="button" 
+                id="clear-btn" 
+                aria-label="Clear search" 
+                class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg hover:text-black transition-colors">
+          <i class="fas fa-times"></i>
+        </button>
+      </form>
+    </div>
+    
+    <!-- Table Section -->
+    {% include 'components/table.html' %}
+  </main>
+
+  <!-- JavaScript Files -->
+  <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/table.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/wallet-utils.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/donation-modal.js') }}"></script>
+</body>
 </html>
