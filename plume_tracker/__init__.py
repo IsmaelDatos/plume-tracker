@@ -1,4 +1,3 @@
-# plume_tracker/__init__.py
 from flask import Flask
 import os
 from concurrent.futures import ThreadPoolExecutor
