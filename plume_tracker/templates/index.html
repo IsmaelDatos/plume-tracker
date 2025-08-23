@@ -13,7 +13,6 @@
 </head>
 
 <body class="bg-[#e8e8e8] min-h-screen flex flex-col items-center">
-  <!-- Donation Modal -->
   <div id="donation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
     <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
       <div class="flex justify-between items-start mb-4">
@@ -54,12 +53,9 @@
     </div>
   </div>
 
-  <!-- Navbar -->
   {% include 'components/navbar.html' %}
 
-  <!-- Main Content -->
   <main class="flex-grow w-full flex flex-col items-center mt-20 px-4">
-    <!-- Search Section -->
     <div class="flex flex-col items-center w-full max-w-[700px] mb-16 text-center">
       <h2 class="text-xl font-bold text-black mb-2">
         Busca una wallet / <span class="font-normal">Search a wallet</span>
@@ -86,11 +82,9 @@
       </form>
     </div>
     
-    <!-- Table Section -->
     {% include 'components/table.html' %}
   </main>
 
-  <!-- JavaScript Files -->
   <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
   <script src="{{ url_for('static', filename='js/table.js') }}"></script>
   <script src="{{ url_for('static', filename='js/wallet-utils.js') }}"></script>

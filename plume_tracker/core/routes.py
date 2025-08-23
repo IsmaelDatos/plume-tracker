@@ -4,6 +4,7 @@ import requests
 from flask import Blueprint, jsonify, render_template, request, redirect, url_for, Response
 from .services import PlumeService, S2StatsService, ActivityService
 import asyncio
+import json, os
 
 bp = Blueprint('core', __name__, url_prefix='/')
 service = PlumeService()
@@ -42,24 +43,43 @@ async def s2_stats():
 
 @bp.route('/api/top-earners/stream')
 def top_earners_stream():
-    def generate():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        async def run():
+    async def generate_async():
+        try:
             async for message in service.stream_top_earners():
-                yield f"data: {message}\n\n"
-        for chunk in loop.run_until_complete(_collect(run())):
-            yield chunk
+                yield f"data: {json.dumps(message)}\n\n"
+        except Exception as e:
+            logger.error(f"Stream error: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
-    return Response(generate(), mimetype='text/event-stream')
-
-async def _collect(agen):
-    """Convierte un async generator en lista para streaming en WSGI."""
-    items = []
-    async for x in agen:
-        items.append(x)
-    return items
-
+    def generate():
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            async_gen = generate_async()
+            while True:
+                try:
+                    message = loop.run_until_complete(async_gen.__anext__())
+                    yield message
+                except StopAsyncIteration:
+                    break
+                    
+        except Exception as e:
+            logger.error(f"Generation error: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        finally:
+            if 'loop' in locals():
+                loop.close()
+    
+    return Response(
+        generate(), 
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'
+        }
+    )
+    
 @bp.route('/search', methods=['GET'])
 def search_wallet():
     wallet_address = request.args.get('wallet_address', '').strip()
@@ -262,7 +282,96 @@ def wallet_details(wallet_address):
                                wallet=wallet_address,
                                error="An unexpected error occurred")
 
+@bp.route('/check-sybil', methods=['POST'])
+def check_sybil():
+    wallet_address = request.form.get('wallet_address', '').strip().lower()
+    
+    if not wallet_address:
+        return jsonify({'error': 'Wallet address is required'}), 400
+    
+    if not wallet_address.startswith('0x') or len(wallet_address) != 42:
+        return jsonify({'error': 'Invalid wallet address format'}), 400
+    
+    try:
+        sybil_data_path = os.path.join(os.path.dirname(__file__), '..', 'static', 'data', 'wallet_search_sybil.json')
         
+        with open(sybil_data_path, 'r') as f:
+            sybil_data = json.load(f)
+        
+        result = None
+        for wallet in sybil_data:
+            if wallet['walletAddress'].lower() == wallet_address:
+                result = wallet
+                break
+        
+        if result:
+            return jsonify({
+                'found': True,
+                'walletAddress': result['walletAddress'],
+                'sybilFlag': result['sybilFlag']
+            })
+        else:
+            return jsonify({
+                'found': False,
+                'message': 'Wallet not found in the database'
+            })
+            
+    except FileNotFoundError:
+        return jsonify({'error': 'Sybil database not available'}), 500
+    except Exception as e:
+        logger.error(f"Error checking sybil status: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+    
+@bp.route('/api/network-data')
+def api_network_data():
+    try:
+        data_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            'static', 
+            'data', 
+            'plume_networks_summary.json'
+        )
+        
+        with open(data_path, 'r') as f:
+            network_data = json.load(f)
+        return jsonify(network_data[:200])
+            
+    except Exception as e:
+        logger.error(f"API Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @bp.route('/sybil-analysis')
 def sybil_analysis():
-    return render_template('sybil_analysis.html')
+    try:
+        data_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            'static', 
+            'data', 
+            'plume_networks_summary.json'
+        )
+        
+        with open(data_path, 'r') as f:
+            network_data = json.load(f)
+        
+        networks_sorted = sorted(network_data, key=lambda x: x.get('walletCount', 0), reverse=True)
+        
+        page = request.args.get('page', 1, type=int)
+        per_page = 10
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        
+        paginated_networks = networks_sorted[start_idx:end_idx]
+        total_pages = (len(networks_sorted) + per_page - 1) // per_page
+        
+        return render_template(
+            'network_analysis.html',
+            networks=paginated_networks,
+            current_page=page,
+            total_pages=total_pages,
+            total_networks=len(networks_sorted),
+            now=datetime.datetime.utcnow()
+        )
+        
+    except Exception as e:
+        logger.error(f"Error: {str(e)}")
+        return render_template('network_analysis.html', error=str(e))
