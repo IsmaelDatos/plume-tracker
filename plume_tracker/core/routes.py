@@ -340,43 +340,6 @@ def api_network_data():
         logger.error(f"API Error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# @bp.route('/sybil-analysis')
-# def sybil_analysis():
-#     try:
-#         data_path = os.path.join(
-#             os.path.dirname(os.path.dirname(__file__)),
-#             'static', 
-#             'data', 
-#             '4_plume_networks_summary.json'
-#         )
-        
-#         with open(data_path, 'r') as f:
-#             network_data = json.load(f)
-        
-#         networks_sorted = sorted(network_data, key=lambda x: x.get('walletCount', 0), reverse=True)
-        
-#         page = request.args.get('page', 1, type=int)
-#         per_page = 10
-#         start_idx = (page - 1) * per_page
-#         end_idx = start_idx + per_page
-        
-#         paginated_networks = networks_sorted[start_idx:end_idx]
-#         total_pages = (len(networks_sorted) + per_page - 1) // per_page
-        
-#         return render_template(
-#             'network_analysis.html',
-#             networks=paginated_networks,
-#             current_page=page,
-#             total_pages=total_pages,
-#             total_networks=len(networks_sorted),
-#             now=datetime.datetime.utcnow()
-#         )
-        
-#     except Exception as e:
-#         logger.error(f"Error: {str(e)}")
-#         return render_template('network_analysis.html', error=str(e))
-
-
 @bp.route('/sybil-analysis')
 def sybil_analysis():
     try:
