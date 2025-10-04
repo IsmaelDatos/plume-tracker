@@ -1,8 +1,8 @@
 import json
 from collections import defaultdict
 
-INPUT_FILE = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data2/plume_wallets_enriched.json"
-OUTPUT_FILE = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data2/plume_networks.json"
+INPUT_FILE = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data/2_plume_wallets_enriched.json"
+OUTPUT_FILE = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data/3_plume_networks.json"
 
 
 def build_wallet_dict(wallets):

@@ -1,7 +1,7 @@
 import json
 
-INPUT_FILE = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data2/plume_networks.json"
-OUTPUT_FILE = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data2/plume_networks_summary.json"
+INPUT_FILE = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data/3_plume_networks.json"
+OUTPUT_FILE = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data/4_plume_networks_summary.json"
 
 def traverse_wallets(wallet):
     """Recorre recursivamente un árbol de referidos y devuelve lista plana de wallets"""

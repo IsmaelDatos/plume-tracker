@@ -293,7 +293,7 @@ def check_sybil():
         return jsonify({'error': 'Invalid wallet address format'}), 400
     
     try:
-        sybil_data_path = os.path.join(os.path.dirname(__file__), '..', 'static', 'data', 'wallet_search_sybil.json')
+        sybil_data_path = os.path.join(os.path.dirname(__file__), '..', 'static', 'data', '5_wallet_search_sybil.json')
         
         with open(sybil_data_path, 'r') as f:
             sybil_data = json.load(f)
@@ -329,7 +329,7 @@ def api_network_data():
             os.path.dirname(os.path.dirname(__file__)),
             'static', 
             'data', 
-            'plume_networks_summary.json'
+            '4_plume_networks_summary.json'
         )
         
         with open(data_path, 'r') as f:
@@ -340,38 +340,115 @@ def api_network_data():
         logger.error(f"API Error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+# @bp.route('/sybil-analysis')
+# def sybil_analysis():
+#     try:
+#         data_path = os.path.join(
+#             os.path.dirname(os.path.dirname(__file__)),
+#             'static', 
+#             'data', 
+#             '4_plume_networks_summary.json'
+#         )
+        
+#         with open(data_path, 'r') as f:
+#             network_data = json.load(f)
+        
+#         networks_sorted = sorted(network_data, key=lambda x: x.get('walletCount', 0), reverse=True)
+        
+#         page = request.args.get('page', 1, type=int)
+#         per_page = 10
+#         start_idx = (page - 1) * per_page
+#         end_idx = start_idx + per_page
+        
+#         paginated_networks = networks_sorted[start_idx:end_idx]
+#         total_pages = (len(networks_sorted) + per_page - 1) // per_page
+        
+#         return render_template(
+#             'network_analysis.html',
+#             networks=paginated_networks,
+#             current_page=page,
+#             total_pages=total_pages,
+#             total_networks=len(networks_sorted),
+#             now=datetime.datetime.utcnow()
+#         )
+        
+#     except Exception as e:
+#         logger.error(f"Error: {str(e)}")
+#         return render_template('network_analysis.html', error=str(e))
+
+
 @bp.route('/sybil-analysis')
 def sybil_analysis():
     try:
+        import datetime, json, os
+
         data_path = os.path.join(
             os.path.dirname(os.path.dirname(__file__)),
-            'static', 
-            'data', 
-            'plume_networks_summary.json'
+            'static',
+            'data',
+            '4_plume_networks_summary.json'
         )
-        
-        with open(data_path, 'r') as f:
+
+        with open(data_path, 'r', encoding='utf-8') as f:
             network_data = json.load(f)
-        
+
+        # Ordenamos las redes por cantidad de wallets
         networks_sorted = sorted(network_data, key=lambda x: x.get('walletCount', 0), reverse=True)
-        
+
+        # 🔹 Totales generales
+        total_wallets = sum(item.get('walletCount', 0) for item in networks_sorted)
+        total_sybil_wallets = sum(
+            (item.get('walletCount', 0) * item.get('sybilPercent', 0) / 100)
+            for item in networks_sorted
+        )
+        total_legit_wallets = total_wallets - total_sybil_wallets
+
+        # 🔹 Totales de XP
+        total_xp = sum(item.get('totalXp', 0) for item in networks_sorted)
+        total_sybil_xp = sum(
+            (item.get('totalXp', 0) * item.get('sybilPercent', 0) / 100)
+            for item in networks_sorted
+        )
+        total_legit_xp = total_xp - total_sybil_xp
+
+        # 🔹 Porcentajes globales
+        sybil_percent = round((total_sybil_wallets / total_wallets) * 100, 2) if total_wallets else 0
+        legit_percent = 100 - sybil_percent
+
+        sybil_xp_percent = round((total_sybil_xp / total_xp) * 100, 2) if total_xp else 0
+        legit_xp_percent = 100 - sybil_xp_percent
+
+        # Paginación
         page = request.args.get('page', 1, type=int)
         per_page = 10
         start_idx = (page - 1) * per_page
         end_idx = start_idx + per_page
-        
         paginated_networks = networks_sorted[start_idx:end_idx]
         total_pages = (len(networks_sorted) + per_page - 1) // per_page
-        
+
         return render_template(
             'network_analysis.html',
             networks=paginated_networks,
             current_page=page,
             total_pages=total_pages,
             total_networks=len(networks_sorted),
+
+            # 🔹 Números reales enviados a la plantilla
+            total_wallets=int(total_wallets),
+            total_sybil_wallets=int(total_sybil_wallets),
+            total_legit_wallets=int(total_legit_wallets),
+            sybil_percent=sybil_percent,
+            legit_percent=legit_percent,
+
+            total_xp=int(total_xp),
+            total_sybil_xp=int(total_sybil_xp),
+            total_legit_xp=int(total_legit_xp),
+            sybil_xp_percent=sybil_xp_percent,
+            legit_xp_percent=legit_xp_percent,
+
             now=datetime.datetime.utcnow()
         )
-        
+
     except Exception as e:
         logger.error(f"Error: {str(e)}")
         return render_template('network_analysis.html', error=str(e))

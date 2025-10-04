@@ -1,8 +1,8 @@
 import json
 
 def procesar_archivo_sybil():
-    ruta_entrada = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data/plume_wallets_enriched.json"
-    ruta_salida = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data/wallet_search_sybil.json"
+    ruta_entrada = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data/2_plume_wallets_enriched.json"
+    ruta_salida = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data/5_wallet_search_sybil.json"
     
     try:
         with open(ruta_entrada, 'r') as archivo:

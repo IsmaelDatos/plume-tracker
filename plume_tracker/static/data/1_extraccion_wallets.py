@@ -6,9 +6,9 @@ BASE_URL = "https://portal-api.plume.org/api/v1/stats/leaderboard"
 COUNT_PER_PAGE = 2000
 TIMEOUT_SECONDS = 30
 
-OUTPUT_FOLDER = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data2"
+OUTPUT_FOLDER = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data"
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-OUTPUT_FILE = os.path.join(OUTPUT_FOLDER, "plume_wallets.json")
+OUTPUT_FILE = os.path.join(OUTPUT_FOLDER, "1_plume_wallets.json")
 
 def obtener_wallets_unicas_y_guardar():
     offset = 0

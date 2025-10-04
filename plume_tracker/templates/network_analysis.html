@@ -29,7 +29,7 @@
             <div class="flex items-center">
                 <i class="fas fa-info-circle text-blue-600 mr-2 text-lg"></i>
                 <p class="text-blue-800 text-sm">
-                    <strong>Data Snapshot:</strong> August 20, 2024 • 
+                    <strong>Data Snapshot:</strong> October 4, 2025 • 
                     <strong>Displaying:</strong> Top 200 largest networks (out of 105,399 total networks)
                 </p>
             </div>
@@ -54,21 +54,29 @@
                     </div>
                     <h3 class="text-lg font-bold text-gray-800">Total Wallets</h3>
                 </div>
-                <div class="text-2xl font-bold text-gray-900 mb-2">247,761</div>
+
+                <div class="text-2xl font-bold text-gray-900 mb-2">
+                    {{ "{:,}".format(total_wallets) }}
+                </div>
+
                 <div class="space-y-1 text-sm text-gray-600">
                     <div class="flex justify-between">
                         <span class="flex items-center">
                             <i class="fas fa-user-slash text-red-500 mr-1"></i>
                             Sybil Wallets:
                         </span>
-                        <span class="font-semibold">166,093 (67.04%)</span>
+                        <span class="font-semibold">
+                            {{ "{:,}".format(total_sybil_wallets) }} ({{ sybil_percent }}%)
+                        </span>
                     </div>
                     <div class="flex justify-between">
                         <span class="flex items-center">
                             <i class="fas fa-user-check text-green-500 mr-1"></i>
                             Legitimate Wallets:
                         </span>
-                        <span class="font-semibold">81,668 (32.96%)</span>
+                        <span class="font-semibold">
+                            {{ "{:,}".format(total_legit_wallets) }} ({{ legit_percent }}%)
+                        </span>
                     </div>
                 </div>
             </div>
@@ -81,21 +89,29 @@
                     </div>
                     <h3 class="text-lg font-bold text-gray-800">Total XP Accumulated</h3>
                 </div>
-                <div class="text-2xl font-bold text-gray-900 mb-2">1,444,431,850</div>
+
+                <div class="text-2xl font-bold text-gray-900 mb-2">
+                    {{ "{:,}".format(total_xp) }}
+                </div>
+
                 <div class="space-y-1 text-sm text-gray-600">
                     <div class="flex justify-between">
                         <span class="flex items-center">
                             <i class="fas fa-user-slash text-red-500 mr-1"></i>
                             Sybil XP:
                         </span>
-                        <span class="font-semibold">267,286,468 (18.50%)</span>
+                        <span class="font-semibold">
+                            {{ "{:,}".format(total_sybil_xp) }} ({{ sybil_xp_percent }}%)
+                        </span>
                     </div>
                     <div class="flex justify-between">
                         <span class="flex items-center">
                             <i class="fas fa-user-check text-green-500 mr-1"></i>
                             Legitimate XP:
                         </span>
-                        <span class="font-semibold">1,177,145,382 (81.50%)</span>
+                        <span class="font-semibold">
+                            {{ "{:,}".format(total_legit_xp) }} ({{ legit_xp_percent }}%)
+                        </span>
                     </div>
                 </div>
             </div>

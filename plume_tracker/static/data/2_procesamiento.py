@@ -6,8 +6,8 @@ import random
 import time
 from datetime import datetime
 
-INPUT_FILE = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data2/plume_wallets.json"
-OUTPUT_FILE = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data2/plume_wallets_enriched.json"
+INPUT_FILE = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data/1_plume_wallets.json"
+OUTPUT_FILE = "/home/ismael/Desktop/plume-tracker/plume_tracker/static/data/2_plume_wallets_enriched.json"
 
 PLUME_STATS_API = "https://portal-api.plume.org/api/v1/stats/wallet"
 PLUME_EXPLORER_API = "https://explorer.plume.org/api"
