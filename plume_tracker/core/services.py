@@ -4,11 +4,18 @@ import pandas as pd
 import nest_asyncio
 import json
 import requests
+import datetime as dt
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import logging
 import concurrent.futures
 import time
+import threading
+import os
+import numpy as np
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -381,3 +388,208 @@ class S2StatsService:
                         return data["data"]["PLUME"]["quote"]["USD"]["price"]
         except:
             return None
+        
+class WalletAnalyticsService:
+    PLUME_EXPLORER_API = "https://explorer.plume.org/api"
+    COINGECKO_API = "https://api.coingecko.com/api/v3/coins/plume/market_chart?vs_currency=usd&days=365"
+    MAX_PAGES = 100
+    OFFSET_PER_PAGE = 10000
+    WORKERS = min(32, (os.cpu_count() or 4) * 4)
+    START_DATE = dt.datetime(2025, 6, 5)  # Fecha de lanzamiento
+
+    @staticmethod
+    def _setup_session():
+        """Crea una sesión requests con alto rendimiento y reintentos"""
+        session = requests.Session()
+        adapter = HTTPAdapter(
+            pool_connections=WalletAnalyticsService.WORKERS * 2,
+            pool_maxsize=WalletAnalyticsService.WORKERS * 2,
+            max_retries=Retry(
+                total=3,
+                backoff_factor=0.5,
+                status_forcelist=(429, 500, 502, 503, 504),
+                allowed_methods=frozenset(["GET"])
+            ),
+        )
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        return session
+
+    @staticmethod
+    def _get_transactions_page(session, wallet_address, page):
+        """Descarga una página de transacciones de Plume Explorer"""
+        params = {
+            "module": "account",
+            "action": "txlist",
+            "address": wallet_address,
+            "page": page,
+            "offset": WalletAnalyticsService.OFFSET_PER_PAGE,
+            "sort": "asc",
+        }
+        try:
+            r = session.get(WalletAnalyticsService.PLUME_EXPLORER_API, params=params, timeout=20)
+            if r.status_code == 200:
+                data = r.json()
+                if data.get("message") == "OK":
+                    return data.get("result", []) or []
+            return []
+        except Exception:
+            return []
+
+    @staticmethod
+    def _fetch_plume_prices():
+        """Descarga precios diarios de PLUME/USD desde CoinGecko"""
+        try:
+            r = requests.get(WalletAnalyticsService.COINGECKO_API, timeout=15)
+            data = r.json()
+            prices = data.get("prices", [])
+            df = pd.DataFrame(prices, columns=["timestamp", "price_usd"])
+            df["date"] = pd.to_datetime(df["timestamp"], unit="ms").dt.date
+            df = df.groupby("date", as_index=False)["price_usd"].last()
+            return df.set_index("date")["price_usd"]
+        except Exception as e:
+            logger.error(f"Error fetching PLUME prices: {e}")
+            return pd.Series(dtype=float)
+
+    @staticmethod
+    def _compute_week_index(date):
+        delta_days = (date - WalletAnalyticsService.START_DATE.date()).days
+        if delta_days < 0:
+            return 0
+        return int(delta_days // 7 + 1)
+
+    @classmethod
+    def analyze_wallet(cls, wallet_address: str):
+        """Analiza una wallet completa y devuelve datos JSON listos para graficar."""
+        session = cls._setup_session()
+        wallet_lower = wallet_address.lower()
+        next_page = 1
+        stop = False
+        lock = threading.Lock()
+        txs_out = []
+
+        def worker():
+            nonlocal next_page, stop
+            local_txs = []
+            while True:
+                with lock:
+                    if stop or next_page > cls.MAX_PAGES:
+                        break
+                    page = next_page
+                    next_page += 1
+                txs = cls._get_transactions_page(session, wallet_lower, page)
+                if not txs:
+                    with lock:
+                        stop = True
+                    break
+                for tx in txs:
+                    if tx.get("from", "").lower() == wallet_lower:
+                        local_txs.append(tx)
+            return local_txs
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=cls.WORKERS) as ex:
+            futures = [ex.submit(worker) for _ in range(cls.WORKERS)]
+            for f in concurrent.futures.as_completed(futures):
+                txs_out.extend(f.result())
+
+        if not txs_out:
+            logger.info(f"No se encontraron transacciones para {wallet_address}")
+            return {"wallet": wallet_address, "message": "No transactions found"}
+
+        # Convertir a DataFrame
+        df = pd.DataFrame(txs_out)
+        df["timeStamp"] = pd.to_datetime(df["timeStamp"].astype(int), unit="s", utc=True)
+        df["gasUsed"] = df["gasUsed"].astype(int)
+        df["gasPrice"] = df["gasPrice"].astype(int)
+        df["fee_plume"] = (df["gasUsed"] * df["gasPrice"]) / 1e18
+        df["date"] = df["timeStamp"].dt.date
+        df["semana_custom"] = df["date"].apply(cls._compute_week_index)
+        df = df[df["semana_custom"] > 0]
+
+        # Obtener precios PLUME/USD
+        price_series = cls._fetch_plume_prices()
+        df["price_usd"] = df["date"].map(price_series)
+        df["fee_usd"] = df["fee_plume"] * df["price_usd"]
+
+        # Agrupar por semana
+        weekly_fees = df.groupby("semana_custom")[["fee_plume", "fee_usd"]].sum().reset_index()
+        weekly_txn = df.groupby("semana_custom").size().reset_index(name="tx_count")
+
+        # CONVERTIR VALORES NUMPY A TIPOS NATIVOS DE PYTHON
+        total_plume = float(weekly_fees["fee_plume"].sum())
+        total_usd = float(weekly_fees["fee_usd"].sum())
+        total_txn = int(weekly_txn["tx_count"].sum())
+
+        # Último día
+        last_tx_time = df["timeStamp"].max()
+        last_day_start = dt.datetime.combine(last_tx_time.date(), dt.time(0, 0), tzinfo=dt.timezone.utc)
+        last_day_df = df[(df["timeStamp"] >= last_day_start) & (df["timeStamp"] <= last_tx_time)]
+        last_day_fee = float(last_day_df["fee_plume"].sum())
+        last_day_txn = int(last_day_df.shape[0])
+
+        # Última semana
+        last_week = int(df["semana_custom"].max())
+        df_last_week = df[df["semana_custom"] == last_week]
+        daily_fees = df_last_week.groupby("date")["fee_plume"].sum().reset_index()
+        daily_txn = df_last_week.groupby("date").size().reset_index(name="tx_count")
+
+        # Completar días faltantes
+        start_of_week = cls.START_DATE + dt.timedelta(weeks=last_week - 1)
+        week_days = [start_of_week + dt.timedelta(days=i) for i in range(7)]
+        week_dates = [d.date() for d in week_days]
+        daily_fees["date"] = pd.to_datetime(daily_fees["date"]).dt.date
+        daily_txn["date"] = pd.to_datetime(daily_txn["date"]).dt.date
+        week_df = pd.DataFrame({"date": week_dates})
+        daily_fees = week_df.merge(daily_fees, on="date", how="left").fillna(0)
+        daily_txn = week_df.merge(daily_txn, on="date", how="left").fillna(0)
+
+        # CONVERTIR DATAFRAMES A DICT CON TIPOS NATIVOS
+        def convert_to_native(obj):
+            if hasattr(obj, 'item'):
+                return obj.item()
+            return obj
+
+        weekly_fees_dict = []
+        for _, row in weekly_fees.iterrows():
+            weekly_fees_dict.append({
+                "semana_custom": int(row["semana_custom"]),
+                "fee_plume": float(row["fee_plume"]),
+                "fee_usd": float(row["fee_usd"])
+            })
+
+        weekly_txn_dict = []
+        for _, row in weekly_txn.iterrows():
+            weekly_txn_dict.append({
+                "semana_custom": int(row["semana_custom"]),
+                "tx_count": int(row["tx_count"])
+            })
+
+        daily_fees_dict = []
+        for _, row in daily_fees.iterrows():
+            daily_fees_dict.append({
+                "date": row["date"].isoformat() if hasattr(row["date"], 'isoformat') else str(row["date"]),
+                "fee_plume": float(row["fee_plume"])
+            })
+
+        daily_txn_dict = []
+        for _, row in daily_txn.iterrows():
+            daily_txn_dict.append({
+                "date": row["date"].isoformat() if hasattr(row["date"], 'isoformat') else str(row["date"]),
+                "tx_count": int(row["tx_count"])
+            })
+
+        # Resultado JSON listo para graficar
+        return {
+            "wallet": wallet_address,
+            "total_fees_plume": total_plume,
+            "total_fees_usd": total_usd,
+            "total_transactions": total_txn,
+            "last_day": {
+                "fees_plume": last_day_fee,
+                "transactions": last_day_txn
+            },
+            "weekly_fees": weekly_fees_dict,
+            "weekly_txn": weekly_txn_dict,
+            "daily_fees": daily_fees_dict,
+            "daily_txn": daily_txn_dict,
+        }

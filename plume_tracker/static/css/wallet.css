@@ -192,3 +192,7 @@ canvas#portfolioChart {
 .copy-btn:hover {
     color: #FF3200;
 }
+
+.hidden {
+    display: none;
+}

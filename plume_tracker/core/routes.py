@@ -3,8 +3,11 @@ import logging
 import requests
 from flask import Blueprint, jsonify, render_template, request, redirect, url_for, Response
 from .services import PlumeService, S2StatsService, ActivityService
+from functools import lru_cache
+from plume_tracker.core.services import WalletAnalyticsService
 import asyncio
 import json, os
+
 
 bp = Blueprint('core', __name__, url_prefix='/')
 service = PlumeService()
@@ -121,7 +124,7 @@ def wallet_details(wallet_address):
                                    error="This wallet doesn't have an XP ranking")
 
         offset = max(xp_rank - 11, 0)
-        count = 21
+        count = 13
         
         leaderboard_url = (
             f"{PLUME_API_BASE}/leaderboard?"
@@ -282,6 +285,83 @@ def wallet_details(wallet_address):
                                wallet=wallet_address,
                                error="An unexpected error occurred")
 
+@bp.route('/api/leaderboard/more', methods=['GET'])
+def load_more_leaderboard():
+    try:
+        wallet_param = request.args.get('wallet', '').strip()
+        offset = int(request.args.get('offset', 0))
+        count = int(request.args.get('count', 10))
+        target_totalxp_raw = request.args.get('target_totalxp', None)
+
+        # parse target_totalxp si viene
+        target_total_xp = None
+        if target_totalxp_raw is not None:
+            try:
+                target_total_xp = float(target_totalxp_raw)
+            except:
+                target_total_xp = None
+
+        # Llamada al API de leaderboard
+        lb_url = (
+            f"{PLUME_API_BASE}/leaderboard?"
+            f"offset={offset}&count={count}&overrideDay1Override=false&preview=false"
+        )
+        r = requests.get(lb_url, headers=HEADERS, timeout=TIMEOUT)
+        r.raise_for_status()
+        items = r.json().get('data', {}).get('leaderboard', []) or []
+
+        # Si no tenemos target_total_xp, intentar detectarlo en el chunk (por si el wallet objetivo está en este chunk)
+        if target_total_xp is None and wallet_param:
+            for it in items:
+                if it.get('walletAddress', '').lower() == wallet_param.lower():
+                    target_total_xp = it.get('totalXp', 0)
+                    break
+
+        # Si aún no lo tenemos, intentar fallback consultando /wallet?walletAddress=...
+        if target_total_xp is None and wallet_param:
+            try:
+                wurl = f"{PLUME_API_BASE}/wallet?walletAddress={wallet_param}"
+                wr = requests.get(wurl, headers=HEADERS, timeout=TIMEOUT)
+                if wr.status_code == 200:
+                    target_total_xp = wr.json().get('data', {}).get('stats', {}).get('totalXp', 0)
+            except Exception:
+                target_total_xp = None
+
+        processed = []
+        for it in items:
+            total_xp = it.get('totalXp', 0) or 0
+            tvl = it.get('realTvlUsd', it.get('tvlTotalUsd', 0)) or 0
+            user_self = it.get('userSelfXp', 0) or 0
+            referral = it.get('referralBonusXp', 0) or 0
+            staked = it.get('currentPlumeStakingTotalTokens', 0) or 0
+
+            points_diff = None
+            if target_total_xp is not None:
+                try:
+                    points_diff = float(total_xp) - float(target_total_xp)
+                except:
+                    points_diff = None
+
+            processed.append({
+                'walletAddress': it.get('walletAddress', ''),
+                'xpRank': int(it.get('xpRank', 0) or 0),
+                'totalXp': float(total_xp),
+                'TVL': float(tvl),
+                'userSelfXp': float(user_self),
+                'referralBonusXp': float(referral),
+                'currentPlumeStakingTotalTokens': float(staked),
+                'pointsDifference': points_diff
+            })
+
+        return jsonify({'leaderboard': processed})
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Leaderboard more: request error {e}")
+        return jsonify({'error': 'Network error fetching leaderboard'}), 502
+    except Exception as e:
+        logger.exception("Leaderboard more: unexpected error")
+        return jsonify({'error': str(e)}), 500
+
 @bp.route('/check-sybil', methods=['POST'])
 def check_sybil():
     wallet_address = request.form.get('wallet_address', '').strip().lower()
@@ -415,3 +495,33 @@ def sybil_analysis():
     except Exception as e:
         logger.error(f"Error: {str(e)}")
         return render_template('network_analysis.html', error=str(e))
+
+@lru_cache(maxsize=100)
+def _cached_wallet_analytics(wallet_address):
+    return WalletAnalyticsService.analyze_wallet(wallet_address)
+
+@bp.route("/api/wallet/<wallet_address>/analytics", methods=["GET"])
+def wallet_analytics(wallet_address):
+    try:
+        data = _cached_wallet_analytics(wallet_address.lower())
+
+        # Formateamos los datos al esquema solicitado
+        formatted = {
+            "total_plume": data.get("total_fees_plume", 0),
+            "total_usd": data.get("total_fees_usd", 0),
+            "total_txn": data.get("total_transactions", 0),
+            "weekly_fees": data.get("weekly_fees", []),
+            "weekly_txn": data.get("weekly_txn", []),
+            "daily_fees": data.get("daily_fees", []),
+            "daily_txn": data.get("daily_txn", []),
+        }
+
+        return jsonify(formatted), 200
+
+    except Exception as e:
+        logger.error(f"Error in wallet analytics for {wallet_address}: {str(e)}")
+        return jsonify({
+            "error": "Internal server error",
+            "message": str(e)
+        }), 500
+    

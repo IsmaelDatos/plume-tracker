@@ -6,14 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Wallet {{ wallet }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <script src="/static/js/wallet-analytics.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/portfolio.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/wallet.css') }}">
 </head>
+
 <body class="bg-[#e8e8e8] min-h-screen flex flex-col items-center">
     {% include 'components/navbar.html' %}
 
@@ -49,7 +52,7 @@
                 <i class="fas fa-arrow-left mr-1"></i> Back to Home
             </a>
         {% else %}
-            <!-- Sección Leaderboard -->
+            <!-- Leaderboard Section -->
             <div class="mb-8">
                 <h2 class="text-xl font-bold mb-2 flex items-center">
                     <i class="fas fa-trophy mr-2 text-red-gradient"></i>
@@ -72,7 +75,7 @@
                                 <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Points Difference</th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
+                        <tbody id="leaderboard-body" class="bg-white divide-y divide-gray-200">
                             {% for row in leaderboard %}
                             <tr class="{% if row.walletAddress.lower() == wallet.lower() %}bg-gray-100 font-medium{% else %}hover:bg-gray-50{% endif %}">
                                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
@@ -117,9 +120,28 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="text-center mt-4 space-x-4">
+                    <button 
+                        id="load-more-leaderboard" 
+                        data-wallet="{{ wallet }}" 
+                        data-offset="{{ current_offset + 13 }}"
+                        data-original-offset="{{ current_offset + 13 }}"
+                        data-count="10"
+                        data-target-totalxp="{{ target_wallet.totalXp if target_wallet else 0 }}"
+                        class="bg-[#1a1a00] text-white px-6 py-2 rounded-lg font-semibold hover:bg-black transition-colors"
+                    >
+                        Show more
+                    </button>
+                    <button 
+                        id="load-less-leaderboard" 
+                        class="bg-[#1a1a00] text-white px-6 py-2 rounded-lg font-semibold hover:bg-black transition-colors hidden"
+                    >
+                        Show less
+                    </button>
+                </div> 
             </div>
 
-            <!-- Sección Heatmap -->
+            <!-- Heatmap Section -->
             {% if heatmap_data %}            
                 {% include 'components/github_style_heatmap.html' %}
             {% else %}
@@ -129,7 +151,73 @@
                 </div>
             {% endif %}
 
-            <!-- Sección Portfolio -->
+            <!-- Wallet Analytics -->
+            <div class="mt-12">
+                <h2 class="text-xl font-bold mb-4 flex items-center">
+                    Wallet Analytics
+                </h2>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <!-- Fees Spent -->
+                    <div class="bg-red-gradient text-white p-4 rounded-lg shadow flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-90">Fees Spent</p>
+                            <p class="text-xl font-bold" id="total-fees-plume">-- PLUME</p>
+                        </div>
+                    </div>
+
+                    <!-- USD Equivalent -->
+                    <div class="bg-red-gradient text-white p-4 rounded-lg shadow flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-90">USD equivalent</p>
+                            <p class="text-xl font-bold" id="total-fees-usd">--</p>
+                        </div>
+                    </div>
+
+                    <!-- Total Transactions -->
+                    <div class="bg-red-gradient text-white p-4 rounded-lg shadow flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-90">Total Transactions</p>
+                            <p class="text-xl font-bold" id="total-transactions">--</p>
+                        </div>
+                    </div>
+
+                    <!-- Last Active Day -->
+                    <div class="bg-red-gradient text-white p-4 rounded-lg shadow flex flex-col justify-between">
+                        <div>
+                            <p class="text-sm opacity-90 mb-1">Last Active Day: <span id="last-day-date">(fecha)</span></p>
+                            <p class="text-g font-bold" id="last-day-fees">Fees: -- PLUME</p>
+                            <p class="text-g font-bold" id="last-day-txs">Transactions: --</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <h3 class="font-bold mb-2 text-gray-700">Fees per Week</h3>
+                        <div id="weeklyFeesChart" class="h-64"></div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <h3 class="font-bold mb-2 text-gray-700">Transactions per Week</h3>
+                        <div id="weeklyTxnChart" class="h-64"></div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <h3 class="font-bold mb-2 text-gray-700">Daily fees last week</h3>
+                        <div id="dailyFeesChart" class="h-64"></div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <h3 class="font-bold mb-2 text-gray-700">Daily transactions last week</h3>
+                        <div id="dailyTxnChart" class="h-64"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Portfolio Section -->
             {% if tokens and plume_price %}
             <div class="mt-12">
                 <h2 class="text-xl font-bold mb-4 flex items-center">
@@ -137,7 +225,7 @@
                     Portfolio Analysis
                 </h2>
                 
-                <!-- Resumen Portfolio -->
+                <!-- Portfolio Summary -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div class="bg-red-gradient text-white p-4 rounded-lg shadow">
                         <div class="flex items-center justify-between">
@@ -173,7 +261,7 @@
                     </div>
                 </div>
                 
-                <!-- Gráfico y Tabla -->
+                <!-- Chart and Table -->
                 <div class="bg-white p-4 rounded-lg shadow-lg mb-6">
                     <div class="h-64">
                         <canvas id="portfolioChart"></canvas>
@@ -191,9 +279,9 @@
                                     <th class="text-right">% Portfolio</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-200">
+                            <tbody id="assets-body" class="divide-y divide-gray-200">
                                 {% for token in tokens %}
-                                <tr class="hover:bg-gray-50">
+                                <tr class="asset-row hover:bg-gray-50 {% if loop.index > 6 %}hidden{% endif %}">
                                     <td class="whitespace-nowrap py-2">
                                         <div class="flex items-center">
                                             {% if token.symbol == 'PLUME-staked' %}
@@ -228,7 +316,7 @@
                                         <div class="flex items-center justify-end">
                                             <span class="text-xs mr-2">{{ "%.1f"|format(token.percentage) }}%</span>
                                             <div class="progress-container">
-                                                <div class="progress-fill" style="width: {{ token.percentage }}%"></div>
+                                                <div class="progress-fill" style="width: {{ token.percentage or 0 }}%"></div>
                                             </div>
                                         </div>
                                     </td>
@@ -237,6 +325,24 @@
                             </tbody>
                         </table>
                     </div>
+                    
+                    <!-- Show More/Less Assets Buttons -->
+                    {% if tokens|length > 6 %}
+                    <div class="text-center mt-4 space-y-2">
+                        <button 
+                            id="load-more-assets"
+                            class="bg-[#1a1a00] text-white px-6 py-2 rounded-lg font-semibold hover:bg-black transition-colors"
+                        >
+                            Show more
+                        </button>
+                        <button 
+                            id="load-less-assets"
+                            class="bg-[#1a1a00] text-white px-6 py-2 rounded-lg font-semibold hover:bg-black transition-colors hidden"
+                        >
+                            Show less
+                        </button>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
             {% endif %}
@@ -244,6 +350,9 @@
     </main>
 
     <script src="{{ url_for('static', filename='js/wallet-utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/wallet-leaderboard.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/wallet-assets.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/wallet-analytics.js') }}"></script>
     <script>
         // Portfolio Chart
         if (document.getElementById('portfolioChart')) {
@@ -302,4 +411,4 @@
         }
     </script>
 </body>
-</html> 
+</html>
